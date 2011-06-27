@@ -1,0 +1,96 @@
+    function view_intro() {
+        print_simple_box_start('center', '', '', 0, 'generalbox', 'intro');
+        $formatoptions = new stdClass;
+        $formatoptions->noclean = true;
+        echo format_text($this->assignment->description, $this->assignment->format, $formatoptions);
+        // LIGHTWORK PATCH STARTS
+        // displays a link to the rubric PDF for this assignment if there is one
+        global $CFG;
+        include($CFG->dirroot.'/local/lightwork/lib/lw_document.php');
+        $activitydocs = new LW_document($this->cm->course, $this->assignment->id);
+        echo $activitydocs->document_links();
+        // LIGHTWORK PATCH ENDS
+        print_simple_box_end();
+    }
+
+    
+    function delete_instance($assignment) {
+        global $CFG;
+
+        $assignment->courseid = $assignment->course;
+
+        $result = true;
+
+        // LIGHTWORK PATCH STARTS
+        //1.delete lw_marking_history, lw_marking , lw_rubric 
+        // team, and team_student records referencing this assignment 
+        //2.delete rubric files from file dir
+        if (! delete_records('lw_marking_history', 'activity', $assignment->id)) {
+            $result = false;
+        }
+
+        if (! delete_records('lw_marking', 'activity', $assignment->id)) {
+            $result = false;
+        }
+        
+        if (! delete_records('lw_feedback', 'activity', $assignment->id)) {
+            $result = false;
+        }
+
+        if (! delete_records('lw_rubric', 'activity', $assignment->id)) {
+            $result = false;
+        }
+
+        //check assignment type
+        $assignmenttype = $assignment -> assignmenttype;
+        if ($assignmenttype == 'team') {
+            $teams = get_records_sql("SELECT id, assignment, name, membershipopen".
+                                 " FROM {$CFG->prefix}team ".
+                                 " WHERE assignment = ".$assignment->id);
+            if ($teams) {
+                //delete all team_student in these teams
+                foreach ($teams as $team) {
+                    if (! delete_records('team_student', 'team', $team->id)) {
+                        $result = false;
+                    }
+                }
+                //delete all teams
+                if (! delete_records('team', 'assignment', $assignment->id)) {
+                    $result = false;
+                }
+            }            
+        }
+        if ($assignmenttype == 'feedback') {
+            $submissions = get_records_sql("SELECT id FROM {$CFG->prefix}assignment_submissions".
+                                           " WHERE assignment = ".$assignment->id);
+            foreach ($submissions as $submission){
+                if (!delete_records('feedback_submission', 'submission', $submission->id)) {
+                    $result = false;
+                }
+            }        
+        }
+        require_once($CFG->libdir.'/filelib.php');
+        require_once($CFG->dirroot.'/local/lightwork/lib/lw_document.php');
+        fulldelete($CFG->dataroot.'/'.$assignment->course.'/'.LW_document::LW_FOLDER_NAME.'/assignment/'.$assignment->id);
+        // LIGHTWORK PATCH ENDS
+
+        if (! delete_records('assignment_submissions', 'assignment', $assignment->id)) {
+            $result = false;
+        }
+
+        if (! delete_records('assignment', 'id', $assignment->id)) {
+            $result = false;
+        }
+
+        if (! delete_records('event', 'modulename', 'assignment', 'instance', $assignment->id)) {
+            $result = false;
+        }
+        
+        // delete file area with all attachments - ignore errors
+        require_once($CFG->libdir.'/filelib.php');
+        fulldelete($CFG->dataroot.'/'.$assignment->course.'/'.$CFG->moddata.'/assignment/'.$assignment->id);
+
+        assignment_grade_item_delete($assignment);
+
+        return $result;
+    }

@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/db" VERSION="20091029" COMMENT="XMLDB file for Moodle local"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="lw_marking" COMMENT="Marking allocation and marking sheet" NEXT="lw_marking_history">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="marker"/>
+        <FIELD NAME="marker" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="student"/>
+        <FIELD NAME="student" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="marker" NEXT="xmltext"/>
+        <FIELD NAME="xmltext" TYPE="text" LENGTH="medium" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="student" NEXT="activitytype"/>
+        <FIELD NAME="activitytype" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="xmltext" NEXT="activity"/>
+        <FIELD NAME="activity" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="activitytype" NEXT="statuscode"/>
+        <FIELD NAME="statuscode" TYPE="char" LENGTH="2" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="activity" NEXT="timemodified"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="statuscode" NEXT="rubric"/>
+        <FIELD NAME="rubric" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="timemodified" NEXT="deleted"/>
+        <FIELD NAME="deleted" TYPE="int" LENGTH="1" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="rubric"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="marker"/>
+        <KEY NAME="marker" TYPE="foreign" FIELDS="marker" REFTABLE="user" REFFIELDS="id" PREVIOUS="primary" NEXT="student"/>
+        <KEY NAME="student" TYPE="foreign" FIELDS="student" REFTABLE="user" REFFIELDS="id" PREVIOUS="marker" NEXT="activity"/>
+        <KEY NAME="activity" TYPE="foreign" FIELDS="activity" REFTABLE="assignment" REFFIELDS="id" PREVIOUS="student" NEXT="rubric"/>
+        <KEY NAME="rubric" TYPE="foreign" FIELDS="rubric" REFTABLE="lw_rubric" REFFIELDS="lwid" PREVIOUS="activity" NEXT="statuscode"/>
+        <KEY NAME="statuscode" TYPE="foreign" FIELDS="statuscode" REFTABLE="lw_marking_status" REFFIELDS="statuscode" PREVIOUS="rubric"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="marker-student-activity-rubric" UNIQUE="true" FIELDS="marker, student, activity, rubric" NEXT="timemodified"/>
+        <INDEX NAME="timemodified" UNIQUE="false" FIELDS="timemodified" PREVIOUS="marker-student-activity-rubric"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="lw_marking_history" COMMENT="Marking allocation and marking sheet history" PREVIOUS="lw_marking" NEXT="lw_marking_status">
+      <FIELDS>
+      <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="lwid"/>
+      <FIELD NAME="lwid" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="marker"/>
+      <FIELD NAME="marker" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="lwid" NEXT="student"/>
+      <FIELD NAME="student" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="marker" NEXT="xmltext"/>
+      <FIELD NAME="xmltext" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="student" NEXT="activity"/>
+      <FIELD NAME="activity" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="xmltext" NEXT="statuscode"/>
+      <FIELD NAME="statuscode" TYPE="char" LENGTH="2" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="activity" NEXT="timemodified"/>
+      <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="statuscode" NEXT="rubric"/>
+      <FIELD NAME="rubric" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="timemodified" NEXT="comment"/>
+      <FIELD NAME="comment" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="rubric" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="marker"/>
+        <KEY NAME="marker" TYPE="foreign" FIELDS="marker" REFTABLE="user" REFFIELDS="id" PREVIOUS="primary" NEXT="student"/>
+        <KEY NAME="student" TYPE="foreign" FIELDS="student" REFTABLE="user" REFFIELDS="id" PREVIOUS="marker" NEXT="activity"/>
+        <KEY NAME="activity" TYPE="foreign" FIELDS="activity" REFTABLE="assignment" REFFIELDS="id" PREVIOUS="student" NEXT="rubric"/>
+        <KEY NAME="rubric" TYPE="foreign" FIELDS="rubric" REFTABLE="lw_rubric" REFFIELDS="lwid" PREVIOUS="activity" NEXT="statuscode"/>
+        <KEY NAME="statuscode" TYPE="foreign" FIELDS="statuscode" REFTABLE="lw_marking_status" REFFIELDS="statuscode" PREVIOUS="rubric"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="lwid-marker-student-activity-rubric" UNIQUE="true" FIELDS="lwid, marker, student, activity, rubric"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="lw_marking_status" COMMENT="Lookup status descriptors for various marking status values" PREVIOUS="lw_marking_history" NEXT="lw_rubric">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="statuscode"/>
+        <FIELD NAME="statuscode" TYPE="char" LENGTH="2" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="shortdescription"/>
+        <FIELD NAME="shortdescription" TYPE="char" LENGTH="10" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="statuscode" NEXT="longdescription"/>
+        <FIELD NAME="longdescription" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="shortdescription"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="statuscode" UNIQUE="true" FIELDS="statuscode"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="lw_rubric" COMMENT="table to store rubric content" PREVIOUS="lw_marking_status" NEXT="lw_team_marking">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="lwid"/>
+        <FIELD NAME="lwid" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="activity"/>
+        <FIELD NAME="activity" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="lwid" NEXT="activitytype"/>
+        <FIELD NAME="activitytype" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="activity" NEXT="xmltext"/>
+        <FIELD NAME="xmltext" TYPE="text" LENGTH="medium" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="activitytype" NEXT="complete"/>
+        <FIELD NAME="complete" TYPE="int" LENGTH="1" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="xmltext" NEXT="deleted"/>
+        <FIELD NAME="deleted" TYPE="int" LENGTH="1" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="complete" NEXT="timemodified"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="deleted"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="activity"/>
+        <KEY NAME="activity" TYPE="foreign" FIELDS="activity" REFTABLE="assignment" REFFIELDS="id" PREVIOUS="primary"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="lwid-activity" UNIQUE="true" FIELDS="lwid, activity"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="lw_team_marking" COMMENT="Team marking allocation and marking sheet" PREVIOUS="lw_rubric" NEXT="lw_team_marking_history">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="marker"/>
+        <FIELD NAME="marker" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="team"/>
+        <FIELD NAME="team" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="marker" NEXT="xmltext"/>
+        <FIELD NAME="xmltext" TYPE="text" LENGTH="medium" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="team" NEXT="activitytype"/>
+        <FIELD NAME="activitytype" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="xmltext" NEXT="activity"/>
+        <FIELD NAME="activity" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="activitytype" NEXT="statuscode"/>
+        <FIELD NAME="statuscode" TYPE="char" LENGTH="2" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="activity" NEXT="timemodified"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="statuscode" NEXT="rubric"/>
+        <FIELD NAME="rubric" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="timemodified" NEXT="deleted"/>
+        <FIELD NAME="deleted" TYPE="int" LENGTH="1" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="rubric"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="marker"/>
+        <KEY NAME="marker" TYPE="foreign" FIELDS="marker" REFTABLE="user" REFFIELDS="id" PREVIOUS="primary" NEXT="team"/>
+        <KEY NAME="team" TYPE="foreign" FIELDS="team" REFTABLE="team" REFFIELDS="id" PREVIOUS="marker" NEXT="activity"/>
+        <KEY NAME="activity" TYPE="foreign" FIELDS="activity" REFTABLE="assignment" REFFIELDS="id" PREVIOUS="team" NEXT="rubric"/>
+        <KEY NAME="rubric" TYPE="foreign" FIELDS="rubric" REFTABLE="lw_rubric" REFFIELDS="lwid" PREVIOUS="activity" NEXT="statuscode"/>
+        <KEY NAME="statuscode" TYPE="foreign" FIELDS="statuscode" REFTABLE="lw_marking_status" REFFIELDS="statuscode" PREVIOUS="rubric"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="marker-team-activity-rubric" UNIQUE="true" FIELDS="marker, team, activity, rubric"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="lw_team_marking_history" COMMENT="Team marking allocation and marking sheet history" PREVIOUS="lw_team_marking" NEXT="lw_feedback">
+      <FIELDS>
+      <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="lwid"/>
+      <FIELD NAME="lwid" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="marker"/>
+      <FIELD NAME="marker" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="lwid" NEXT="team"/>
+      <FIELD NAME="team" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="marker" NEXT="xmltext"/>
+      <FIELD NAME="xmltext" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="team" NEXT="activity"/>
+      <FIELD NAME="activity" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="xmltext" NEXT="statuscode"/>
+      <FIELD NAME="statuscode" TYPE="char" LENGTH="2" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="activity" NEXT="timemodified"/>
+      <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="statuscode" NEXT="rubric"/>
+      <FIELD NAME="rubric" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="timemodified" NEXT="comment"/>
+      <FIELD NAME="comment" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="rubric" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="marker"/>
+        <KEY NAME="marker" TYPE="foreign" FIELDS="marker" REFTABLE="user" REFFIELDS="id" PREVIOUS="primary" NEXT="team"/>
+        <KEY NAME="team" TYPE="foreign" FIELDS="team" REFTABLE="team" REFFIELDS="id" PREVIOUS="marker" NEXT="activity"/>
+        <KEY NAME="activity" TYPE="foreign" FIELDS="activity" REFTABLE="assignment" REFFIELDS="id" PREVIOUS="team" NEXT="rubric"/>
+        <KEY NAME="rubric" TYPE="foreign" FIELDS="rubric" REFTABLE="lw_rubric" REFFIELDS="lwid" PREVIOUS="activity" NEXT="statuscode"/>
+        <KEY NAME="statuscode" TYPE="foreign" FIELDS="statuscode" REFTABLE="lw_marking_status" REFFIELDS="statuscode" PREVIOUS="rubric"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="lwid-marker-team-activity-rubric" UNIQUE="true" FIELDS="lwid, marker, team, activity, rubric"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="lw_feedback" COMMENT="Feedback allocation and marking sheet" PREVIOUS="lw_team_marking_history">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="marker"/>
+        <FIELD NAME="marker" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="student"/>
+        <FIELD NAME="student" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="marker" NEXT="xmltext"/>
+        <FIELD NAME="xmltext" TYPE="text" LENGTH="medium" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="student" NEXT="activitytype"/>
+        <FIELD NAME="activitytype" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="xmltext" NEXT="activity"/>
+        <FIELD NAME="activity" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="activitytype" NEXT="statuscode"/>
+        <FIELD NAME="statuscode" TYPE="char" LENGTH="2" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="activity" NEXT="timemodified"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="statuscode" NEXT="rubric"/>
+        <FIELD NAME="rubric" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="timemodified" NEXT="deleted"/>
+        <FIELD NAME="deleted" TYPE="int" LENGTH="1" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="rubric"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="marker"/>
+        <KEY NAME="marker" TYPE="foreign" FIELDS="marker" REFTABLE="user" REFFIELDS="id" PREVIOUS="primary" NEXT="student"/>
+        <KEY NAME="student" TYPE="foreign" FIELDS="student" REFTABLE="user" REFFIELDS="id" PREVIOUS="marker" NEXT="activity"/>
+        <KEY NAME="activity" TYPE="foreign" FIELDS="activity" REFTABLE="assignment" REFFIELDS="id" PREVIOUS="student" NEXT="rubric"/>
+        <KEY NAME="rubric" TYPE="foreign" FIELDS="rubric" REFTABLE="lw_rubric" REFFIELDS="lwid" PREVIOUS="activity" NEXT="statuscode"/>
+        <KEY NAME="statuscode" TYPE="foreign" FIELDS="statuscode" REFTABLE="lw_marking_status" REFFIELDS="statuscode" PREVIOUS="rubric"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="marker-student-activity-rubric" UNIQUE="true" FIELDS="marker, student, activity, rubric" NEXT="timemodified"/>
+        <INDEX NAME="timemodified" UNIQUE="false" FIELDS="timemodified" PREVIOUS="marker-student-activity-rubric"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>
