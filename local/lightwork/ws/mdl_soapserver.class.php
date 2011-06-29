@@ -94,9 +94,10 @@ class mdl_soapserver extends server {
      *
      */
     function validate_session($sesskey) {
+    	global $DB;
         $returnvalue = true;
 
-        $this->session = get_record('webservices_sessions', 'sessionkey', $sesskey, 'verified', '1');
+        $this->session = $DB->get_record('webservices_sessions', array('sessionkey'=>$sesskey,'verified'=>'1'));
 
         //  Check that is a valid session
         if (!$this->session) {
@@ -111,7 +112,7 @@ class mdl_soapserver extends server {
         }
         //  If all ok, make sure that we update last access time
         else {
-            set_field('webservices_sessions','sessionbegin',time(),'id',$this->session->id);
+            $DB->set_field('webservices_sessions','sessionbegin',time(),array('id'=>$this->session->id));
         }
 
         return $returnvalue;
@@ -271,7 +272,7 @@ class mdl_soapserver extends server {
      *
      */
     function getCourses($sesskey, $timemodified) {
-        global $USER;
+        global $USER, $DB;
         $ids = array('courseid'=>'');
         $rcourses = array();
         $errors = array();

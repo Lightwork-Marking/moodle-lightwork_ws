@@ -1515,16 +1515,16 @@ class LW_Marker  {
      * @param $key        name of the column we want a value from
      * @return string    value of field
      */
-    private function __get( $key )  {
-        $returnvalue = null;
-        $classvars = get_class_vars(get_class($this));
-
-        if (array_key_exists($key, $classvars)) {
-            $returnvalue = $this->{$key};
-        }
-
-        return $returnvalue;
-    }
+    //private function __get( $key )  {
+    //    $returnvalue = null;
+    //    $classvars = get_class_vars(get_class($this));
+//
+   //     if (array_key_exists($key, $classvars)) {
+   //         $returnvalue = $this->{$key};
+   //     }
+//
+     //   return $returnvalue;
+    //}
 
 
     /**
@@ -1535,17 +1535,17 @@ class LW_Marker  {
      * @param $value    value we want to set it to
      * @return boolean    true if field present, false if not
      */
-    private function __set( $key, $value )  {
-        $returnvalue = false;
-        $classvars = get_class_vars(get_class($this));
-
-        if (array_key_exists($key, $classvars)) {
-            $this->{$key} = $value;
-            $returnvalue = true;
-        }
-
-        return $returnvalue;
-    }
+   // private function __set( $key, $value )  {
+   //     $returnvalue = false;
+   //     $classvars = get_class_vars(get_class($this));
+//
+    //    if (array_key_exists($key, $classvars)) {
+    //        $this->{$key} = $value;
+    //        $returnvalue = true;
+    //    }
+//
+   //     return $returnvalue;
+    //}
      
 }
 
