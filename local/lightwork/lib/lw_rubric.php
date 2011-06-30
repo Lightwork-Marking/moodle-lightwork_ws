@@ -49,22 +49,22 @@ class LW_Rubric {
      * @param  activitytype  integer id of the rubric activity type
      * @return   integer  saved rubric id if save ok, null if not
      */
-    function delete() {
-        $activityid = clean_param($this->activity, PARAM_INT);
-        if (!$activityid) {
-            return null; // cant save without an activity id
-        }
-        if (!$this->activitytype) {
-            return null; // cant save without an activity type
-        }
-        if ($result = delete_records('lw_rubric', 'activity', $activityid, 'activitytype',
-                clean_param($this->activitytype, PARAM_INT))) {
-            return true;
-        } else {
-            error_log('could not delete rubric for activity id: '.$activityid);
-            return null;
-        }
-    }
+    //function delete() {
+    //    $activityid = clean_param($this->activity, PARAM_INT);
+    //    if (!$activityid) {
+    //        return null; // cant save without an activity id
+    //    }
+   //     if (!$this->activitytype) {
+   //         return null; // cant save without an activity type
+   //     }
+   //     if ($result = delete_records('lw_rubric', 'activity', $activityid, 'activitytype',
+   //             clean_param($this->activitytype, PARAM_INT))) {
+   //         return true;
+   //     } else {
+   //         error_log('could not delete rubric for activity id: '.$activityid);
+   //         return null;
+   //     }
+   // }
 
     /**
      * Load a LW Rubric by activity
@@ -73,10 +73,11 @@ class LW_Rubric {
      * @return integer   rubric record id, null if not found
      */
     function get_byactivity($activity, $activitytype) {
+    	global $DB;
         if (!is_numeric($activity) || ($activity<1) || !is_numeric($activitytype) || ($activitytype<1)) {
             return null;
         }
-        if ($rubric = get_record('lw_rubric','activity',$activity,'activitytype',$activitytype)) {
+        if ($rubric = $DB->get_record('lw_rubric',array('activity'=>$activity,'activitytype'=>$activitytype))) {
             $this->id = $rubric->id;
             $this->xmltext = $rubric->xmltext;
             $this->activity = $rubric->activity;
@@ -96,10 +97,11 @@ class LW_Rubric {
      * @return integer	rubric record id, null if not found
      */
     function get_byid($id) {
+    	global $DB;
         if (!is_numeric($id) || ($id<1)) {
             return null;
         }
-        if ($rubric = get_record("lw_rubric", "id", $id)) {
+        if ($rubric = $DB->get_record('lw_rubric', array('id'=>$id))) {
             $this->id = $id;
             $this->xmltext = $rubric->xmltext;
             $this->activity = $rubric->activity;
@@ -118,30 +120,30 @@ class LW_Rubric {
      * @param  lwid     integer lwid of the rubric we want to fetch
      * @return integer  rubric record id, null if not found
      */
-    function get_bylwid($lwid) {
-        if (!is_numeric($lwid) || ($lwid<1)) {
-            return null;
-        }
-        if ($rubric = get_record("lw_rubric", "lwid", $lwid)) {
-            $this->id = $rubric->id;
-            $this->xmltext = $rubric->xmltext;
-            $this->activity = $rubric->activity;
-            $this->activitytype = $rubric->activitytype;
-            $this->complete = $rubric->complete;
-            $this->deleted = $rubric->deleted;
-            $this->timemodified = $rubric->timemodified;
-            $this->lwid = $lwid;
-            return $this->id;
-        }
-        return null;
-    }
+    //function get_bylwid($lwid) {
+    //    if (!is_numeric($lwid) || ($lwid<1)) {
+    //        return null;
+   //    }
+   //     if ($rubric = get_record("lw_rubric", "lwid", $lwid)) {
+   //         $this->id = $rubric->id;
+   //         $this->xmltext = $rubric->xmltext;
+   //         $this->activity = $rubric->activity;
+   //         $this->activitytype = $rubric->activitytype;
+   //         $this->complete = $rubric->complete;
+   //         $this->deleted = $rubric->deleted;
+   //         $this->timemodified = $rubric->timemodified;
+   //         $this->lwid = $lwid;
+   //         return $this->id;
+   //     }
+   //     return null;
+   // }
 
     /**
      * Save a rubric by modifiedtime (from LW client)
      * @return   integer  saved rubric id if save ok, null if not
      */
     function savebytimemodified($timemodified) {
-
+        global $DB;
         $this->lwid = $this->id;
 
         if (!$this->activity) {
@@ -157,8 +159,8 @@ class LW_Rubric {
             return false; // cant save without a lwid
         }
         //Get the corresponding records for the foregn keys
-		$rubric = get_record('lw_rubric','lwid',$this->lwid,'activity',$this->activity);
-        $assignment = get_record("assignment", "id", $this->activity);
+		$rubric = $DB->get_record('lw_rubric',array('lwid'=>$this->lwid,'activity'=>$this->activity));
+        $assignment = $DB->get_record('assignment', array('id'=>$this->activity));
         // a timemodified value of 0 indicates a database insert. A value greater than 0 indicates an update.
         if ($timemodified == 0) {
             // check for referential integrity before doing insert
@@ -172,7 +174,7 @@ class LW_Rubric {
                 $rubric->deleted = clean_param($this->deleted, PARAM_INT);
                 $rubric->timemodified = time();
                 $rubric->lwid = clean_param($this->lwid, PARAM_INT);
-                if ($newid = insert_record('lw_rubric',$rubric,true)) {
+                if ($newid = $DB->insert_record('lw_rubric',$rubric,true)) {
                     $this->id = $newid;
                     $this->timemodified = $rubric->timemodified;
                     return $newid;
@@ -195,7 +197,7 @@ class LW_Rubric {
                 $rubric->complete = clean_param($this->complete, PARAM_INT);
                 $rubric->deleted = clean_param($this->deleted, PARAM_INT);
                 $rubric->timemodified = time();
-                if (update_record('lw_rubric',$rubric)) {
+                if ($DB->update_record('lw_rubric',$rubric)) {
                     $this->timemodified = $rubric->timemodified;
                     return $this->id;
                 }
@@ -215,6 +217,7 @@ class LW_Rubric {
      * @return	integer  saved rubric id if save ok, null if not
      */
     function save() {
+    	global $DB;
         if (!$this->activity) {
             return null; // cant save without an activity id
         }
@@ -225,13 +228,13 @@ class LW_Rubric {
             return null; // cant save without an activity type
         }
 
-        $rubric = get_record('lw_rubric','activity',$this->activity,'activitytype',$this->activitytype);
-        $assignment = get_record("assignment", "id", $this->activity);
+        $rubric = $DB->get_record('lw_rubric',array('activity'=>$this->activity,'activitytype'=>$this->activitytype));
+        $assignment = $DB->get_record('assignment', array('id'=>$this->activity));
 
         if ($rubric && $assignment) {
             $this->id = $rubric->id;
             $rubric->xmltext = $this->helper->sanitiseXml($this->xmltext);
-            if (update_record('lw_rubric',$rubric)) {
+            if ($DB->update_record('lw_rubric',$rubric)) {
                 return $this->id;
             }
         }
@@ -243,7 +246,7 @@ class LW_Rubric {
             $rubric->complete = 0;
             $rubric->deleted = 0;
             $rubric->timemodified = time();
-            if ($newid = insert_record('lw_rubric',$rubric,true)) {
+            if ($newid = $DB->insert_record('lw_rubric',$rubric,true)) {
                 $this->id = $newid;
                 return $newid;
             } else {
@@ -278,9 +281,9 @@ class LW_Rubric {
      * @param $key        name of the column we want a value from
      * @return string    value of field
      */
-    private function __get($key) {
-        return $this->fields[$key];
-    }
+    //private function __get($key) {
+    //    return $this->fields[$key];
+    //}
 
     /**
      * __set() is a magic method which gets called when a method is asked for which
@@ -290,13 +293,13 @@ class LW_Rubric {
      * @param $value    value we want to set it to
      * @return boolean    true if field present, false if not
      */
-    private function __set($key, $value) {
-        if (array_key_exists($key, $this->fields)) {
-            $this->fields[$key] = $value;
-            return true;
-        }
-        return false;
-    }
+    //private function __set($key, $value) {
+    //    if (array_key_exists($key, $this->fields)) {
+    //        $this->fields[$key] = $value;
+    //        return true;
+    //    }
+    //    return false;
+    //}
 
 }
 

@@ -102,7 +102,7 @@ class LW_Marker  {
      * @return  array     $submissions    Array of course objects
      */
     function assignment_submissions_since($assignmentlist, $timemodified, $getall=false, $allstudents) {
-        global $CFG;
+        global $CFG, $DB;
 
         require_once("$CFG->dirroot/mod/assignment/lib.php");
 
@@ -135,8 +135,8 @@ class LW_Marker  {
             $rsubmissions = array();
 
             $cm = get_coursemodule_from_instance('assignment', $assignstudent['id']);
-            $assignment = get_record("assignment", "id", $cm->instance);
-            $course = get_record("course", "id", $assignment->course);
+            $assignment = $DB->get_record('assignment', array('id'=>$cm->instance));
+            $course = $DB->get_record('course', array('id'=>$assignment->course));
 
             if ( $this->is_allowed_assignment_type($assignment) ) {
                 //  Get the assignment object
@@ -393,18 +393,12 @@ class LW_Marker  {
      */
     private function load_courses() {
         $returnvalue = false;
-        $fields = array('id', 'sortorder', 'shortname', 'idnumber','fullname','timecreated','timemodified');
+        $fields = 'sortorder,shortname, idnumber,fullname,timecreated,timemodified';
 
         $courseids = array();
         $courses = new object();
-
-        $courses = get_user_courses_bycap($this->uid,
-        LW_Common::CAP_MARKLWSUBMISSIONS,
-        get_user_access_sitewide($this->uid),
-        false,
-        $sort='c.sortorder ASC',
-        $fields,
-        $limit=0);
+        
+        $courses = get_user_capability_course(LW_Common::CAP_MARKLWSUBMISSIONS,$this->uid,false,$fields,'sortorder ASC');
 
         // now get all the ids from those courses and save those against this Marker user object
         $extrafields='m.id, m.course, m.name, m.assignmenttype, m.grade, m.timedue, m.timemodified';
@@ -500,7 +494,7 @@ class LW_Marker  {
      * @return unknown_type
      */
     private function load_submitted_students($context, $assignmentid, $timemodified=0) {
-        global $CFG;        
+        global $CFG, $DB;        
         $participants = array();
         $students = array();
         
@@ -513,7 +507,7 @@ class LW_Marker  {
                               
         // get student participants who have submitted at least one assignment
         $sql = '';
-        $assignment = get_record("assignment", "id", $assignmentid);
+        $assignment = $DB->get_record('assignment', array('id'=>$assignmentid));
         if ($assignment->assignmenttype == LW_Common::FEEDBACK_TYPE){
             $sql = "SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid".
                    " FROM {$CFG->prefix}user u INNER JOIN".
@@ -544,7 +538,7 @@ class LW_Marker  {
                                   "WHERE a.id= '$assignmentid')".
                    $rolesql." AND (ra.timemodified >= '$timemodified' OR u.timemodified >= '$timemodified')";	
         }
-        if ($students = get_records_sql($sql)) {
+        if ($students = $DB->get_records_sql($sql)) {
             foreach ($students as $participant) {
                 $tempparticipant = array();
                 foreach ($participant as $k1 => $v1) {
@@ -567,7 +561,7 @@ class LW_Marker  {
      * @return unknown_type
      */
     private function load_draft_and_submitted_students($context, $assignmentid, $timemodified=0) {
-        global $CFG;        
+        global $CFG, $DB;        
         $participants = array();
         $students = array();
         
@@ -588,7 +582,7 @@ class LW_Marker  {
                                   "WHERE a.id= '$assignmentid' )".
                    $rolesql." AND (ra.timemodified >= '$timemodified' OR u.timemodified >= '$timemodified')"; 
         
-        if ($students = get_records_sql($sql)) {
+        if ($students = $DB->get_records_sql($sql)) {
             foreach ($students as $participant) {
                 $tempparticipant = array();
                 foreach ($participant as $k1 => $v1) {
@@ -607,8 +601,8 @@ class LW_Marker  {
      * @return  array   An array of marking allocations for this marker
      */
     private function get_marking_allocation($assignmentId) {
-        global $CFG;
-        $allocation = get_records_sql("SELECT id,$this->markable as markable
+        global $CFG, $DB;
+        $allocation = $DB->get_records_sql("SELECT id,$this->markable as markable
                                 FROM {$CFG->prefix}$this->table
                                 WHERE marker = '$this->uid' AND activity = '$assignmentId'");
         return $allocation;
@@ -629,7 +623,7 @@ class LW_Marker  {
      * @return  array   of participant objects
      */
     function course_participants_since($courseid, $timemodified=0, $capability=null) {
-        global $CFG;
+        global $CFG, $DB;
 
         $rolesql = '';
         $roleids = array();
@@ -645,7 +639,7 @@ class LW_Marker  {
             }
         }
 
-        if ($roleparticipants = get_records_sql("SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid ".
+        if ($roleparticipants = $DB->get_records_sql("SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid ".
                                 "FROM {$CFG->prefix}user u INNER JOIN ".
                                 "{$CFG->prefix}role_assignments ra on u.id=ra.userid ".
                                 "WHERE ra.contextid = '$context->id' ".
@@ -678,7 +672,7 @@ class LW_Marker  {
      * @return unknown_type
      */
     function course_submitting_students_since($courseid, $timemodified=0) {
-        global $CFG;        
+        global $CFG, $DB;        
         $participants = array();
         $students = array();
         
@@ -692,7 +686,7 @@ class LW_Marker  {
         }
                               
         // get student participants who have submitted at least one assignment
-        if ($students = get_records_sql("SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid".
+        if ($students = $DB->get_records_sql("SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid".
                                 " FROM {$CFG->prefix}user u INNER JOIN".
                                 " {$CFG->prefix}role_assignments ra on u.id=ra.userid".
                                 " WHERE ra.contextid = '$context->id'".
@@ -724,12 +718,12 @@ class LW_Marker  {
      * @return array     $rmarkings   An array of successfully added/updated making sheets
      */
     public function save_marking($assignmentmarkings, $releaseMarking = false, $allstudents) {
-        global $CFG;
+        global $CFG, $DB;
         require_once("$CFG->libdir/gradelib.php");
         $rmarkings = array();
         foreach ($assignmentmarkings as $activity => $markings) {             
             $markingrecords = $this->get_marking_allocation($activity);
-            $assignment = get_record("assignment", "id", $activity);
+            $assignment = $DB->get_record('assignment', array('id'=>$activity));
             if (!$assignment){
                 $this->error->add_error('Marking', $activity, 'noassignmentfound');
                 continue;
@@ -799,19 +793,19 @@ class LW_Marker  {
                     }
                 }
                 //Get the corresponding records for the foregn keys
-                $rubric = get_record('lw_rubric','lwid',$marking['rubric'],'activity',$marking['activity']);
-                $marker = get_record('user','id',$marking['marker']);
+                $rubric = $DB->get_record('lw_rubric',array('lwid'=>$marking['rubric'],'activity'=>$marking['activity']));
+                $marker = $DB->get_record('user',array('id'=>$marking['marker']));
                 $student = null;
                 if ($this->markable == "student") {
-                    $student = get_record('user','id',$marking['markable']);
+                    $student = $DB->get_record('user',array('id'=>$marking['markable']));
                 } elseif($this->markable == 'team') {
                     //check team existing 
-                    $student = get_record('team', 'id', $marking['markable'], 'assignment', $marking['activity']);
+                    $student = $DB->get_record('team', array('id'=>$marking['markable'], 'assignment'=>$marking['activity']));
                 } else {
                     $this->error->add_error('Type', $marking['markable'], 'typeerror');
                 }
 
-                $statuscode = get_record('lw_marking_status', 'statuscode', $marking['statuscode']);
+                $statuscode = $DB->get_record('lw_marking_status', array('statuscode'=>$marking['statuscode']));
 
 
                 $markercanupdate = false;
@@ -884,7 +878,7 @@ class LW_Marker  {
                             $markupdate->deleted = clean_param($marking['deleted'], PARAM_INT);
                             $markupdate->timemodified = time();
 
-                            if (!insert_record($this->table,$markupdate,true)) {
+                            if (!$DB->insert_record($this->table,$markupdate,false)) {
                                 $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
                             }
                             else {
@@ -893,7 +887,7 @@ class LW_Marker  {
                                 if (isset($marking['markinghistory'])){
                                     foreach($marking['markinghistory'] as $markinghistory) {
                                         // check for referential integrity before doing insert
-                                        $insertedMark = get_record($this->table,'marker',$marking['marker'],$this->markable,$marking['markable'],'activity',$marking['activity']);
+                                        $insertedMark = $DB->get_record($this->table,array('marker'=>$marking['marker'],$this->markable=>$marking['markable'],'activity'=>$marking['activity']));
                                         if ($insertedMark && $statuscode) {
                                             $markhistoryupdate = new object();
                                             $markhistoryupdate->lwid        = clean_param($markinghistory['lwid'], PARAM_INT);
@@ -910,7 +904,7 @@ class LW_Marker  {
                                             $markhistoryupdate->timemodified = $markupdate->timemodified;
 
                                             //  Insert the history record
-                                            if (!insert_record($this->historytable,$markhistoryupdate,true)) {
+                                            if (!$DB->insert_record($this->historytable,$markhistoryupdate,false)) {
                                             	error_log("insert history record fail: markable id ->".$marking['markable']." assignment id ->".$markhistoryupdate->activity." status code -> ".$markhistoryupdate->statuscode);
                                                 $this->error->add_error('MarkingHistory', $markinghistory['lwid'], 'errsysaddmarkinghistory');
                                             }
@@ -1106,14 +1100,14 @@ class LW_Marker  {
      * @return void
      */
     private function release_marking($marking, $grading_info) {
-        global $CFG, $LW_CFG;
+        global $CFG, $LW_CFG, $DB;
         require_once("$CFG->libdir/gradelib.php");
         require_once("$CFG->dirroot/lib/uploadlib.php");
         require_once("$CFG->dirroot/mod/assignment/lib.php");
 
         $cm = get_coursemodule_from_instance('assignment', $marking['activity']);
-        $assignment = get_record("assignment", "id", $cm->instance);
-        $course = get_record("course", "id", $assignment->course);
+        $assignment = $DB->get_record('assignment', array('id'=>$cm->instance));
+        $course = $DB->get_record('course', array('id'=>$assignment->course));
 
         if ($this->is_allowed_assignment_type($assignment)) {
             /*****  Update the Grade *****/
@@ -1146,7 +1140,7 @@ class LW_Marker  {
                 unset($submission->data1);  // Don't need to update this.
                 unset($submission->data2);  // Don't need to update this.
 
-                if (! update_record('assignment_submissions', $submission)) {
+                if (! $DB->update_record('assignment_submissions', $submission)) {
                 	error_log('update submission fail student id ->'.$marking['markable']);
                     $this->error->add_error('Marking', $marking['markable'], 'noupdatemarkingrelease');
                     return false;
@@ -1171,27 +1165,26 @@ class LW_Marker  {
     }
 
     public function release_team_user_marking($marking, $user, $releaseteam = false) {
-        global $CFG, $LW_CFG;
+        global $CFG, $LW_CFG, $DB;
 
         require_once("$CFG->libdir/gradelib.php");
         require_once("$CFG->dirroot/lib/uploadlib.php");
         require_once("$CFG->dirroot/mod/assignment/lib.php");
 
         $cm = get_coursemodule_from_instance('assignment', $marking['activity']);
-        $assignment = get_record("assignment", "id", $cm->instance);
-        $course = get_record("course", "id", $assignment->course);
+        $assignment = $DB->get_record('assignment', array('id'=>$cm->instance));
+        $course = $DB->get_record('course', array('id', $assignment->course));
         $context = get_context_instance(CONTEXT_COURSE, $assignment->course);
           
         if (isset($user)) {
             $sql = get_student_participant_sql($user->student, $context->id);
-            if (!$participant = get_records_sql($sql)) {
+            if (!$participant = $DB->get_records_sql($sql)) {
                 $this->error->add_error('TeamMarking', $user->student, 'studentnotcourseparticipanterror');
                 return false;
             }    
         }
         
         if ($assignment->assignmenttype == 'team') {
-           // error_log('start update team members grade');
             /*****  Update the Grade *****/
             //  Get the assignment object
             require_once("$CFG->dirroot/mod/assignment/type/$assignment->assignmenttype/assignment.class.php");
@@ -1233,7 +1226,7 @@ class LW_Marker  {
                 unset($submission->data1);  // Don't need to update this.
                 unset($submission->data2);  // Don't need to update this.
 
-                if (! update_record('assignment_submissions', $submission)) {
+                if (! $DB->update_record('assignment_submissions', $submission)) {
                     $this->error->add_error('Marking', $user->student, 'noupdatemarkingrelease');
                     return false;
                 }
@@ -1323,7 +1316,7 @@ class LW_Marker  {
      * @return  array  of associative arrays containing marking history data
      */
     public function get_marking_history($historyids) {
-        global $CFG;
+        global $CFG, $DB;
         $activitytype = 1;  // assignment
         $wherein = '';
         $rmarkinghistories = array('markinghistory'=>array());
@@ -1336,7 +1329,7 @@ class LW_Marker  {
                 " AND   rubric = ".$id['rubric'].
                 " AND   activity = ".$id['activity'].
                 " ORDER by timemodified";
-            if ($items = get_records_sql($sql)) {
+            if ($items = $DB->get_records_sql($sql)) {
                 foreach ($items as $item) {
                     $rmarkinghistories['markinghistory'][] = array(
                         'lwid'         => $item->lwid,
@@ -1362,7 +1355,7 @@ class LW_Marker  {
      * @return  array     Array of activity/marking objects
      */
     public function get_rubric($assignmentid,$timemodified=0) {
-        global $CFG;
+        global $CFG, $DB;
         $activitytype = 1;  // assignment
         $wherein = '';
         $ractivities = array();
@@ -1387,7 +1380,7 @@ class LW_Marker  {
                " ORDER BY activity,lwid";
 
 
-        if ($items = get_records_sql($sql)) {
+        if ($items = $DB->get_records_sql($sql)) {
             $activityid = '';
             $rubrics = array();
 
@@ -1439,7 +1432,7 @@ class LW_Marker  {
      * @return  array    Array of marking records
      */
     public function get_marking($activityid, $timemodified=0, $allstudents) {
-        global $CFG;
+        global $CFG, $DB;
 
         $activitytype = 1;  // assignment
         $rmarkings = array();
@@ -1449,7 +1442,7 @@ class LW_Marker  {
             return $rmarkings;
         }
 
-        $assignment = get_record("assignment", "id", $activityid);
+        $assignment = $DB->get_record('assignment', array('id'=>$activityid));
         if (!$assignment){
             $this->error->add_error('Marking', $activityid, 'noassignmentfound');
             return $rmarkings;
@@ -1479,7 +1472,7 @@ class LW_Marker  {
             }
 
             $query = $sql.$wheretime.$submittingstudentsql.$where.' ORDER BY activity,'.$this->markable;
-            if ($items = get_records_sql($query)) {
+            if ($items = $DB->get_records_sql($query)) {
                 foreach ($items as $item) {
                     $xmlTextRef = "marking-".$item->marker."-".$item->markable."-".$item->activity."-".$item->rubric;
                     $rmarkings['marking'][] = array(

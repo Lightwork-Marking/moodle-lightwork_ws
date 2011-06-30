@@ -42,7 +42,7 @@ class LW_Feedback  {
      * @return  array    Array of feedback submission records
      */
     public function get_feedback_submissions($assignmentid, $timemodified=0) {
-        global $CFG;
+        global $CFG, $DB;
 
         $rfeedbacksubmissions = array();
 
@@ -51,7 +51,7 @@ class LW_Feedback  {
             return $rfeedbacksubmissions;
         }
 
-        $assignment = get_record("assignment", "id", $assignmentid);
+        $assignment = $DB->get_record('assignment', array('id', $assignmentid));
         if (!$assignment){
             $this->error->add_error('Feedback', $assignmentid, 'noassignmentfound');
             return $rfeedbacksubmissions;
@@ -86,7 +86,7 @@ class LW_Feedback  {
             }
 
             $query = $sql.$wheretime;
-            if ($items = get_records_sql($query)) {
+            if ($items = $DB->get_records_sql($query)) {
                 foreach ($items as $item) {
                     $rfeedbacksubmissions['feedbackSubmission'][] = array(
                             'id'                  => $item->id,
@@ -112,7 +112,7 @@ class LW_Feedback  {
     }
     
     public function get_demographics($useridswithtimemodified, $assignmentid){
-        global $CFG, $LW_CFG;
+        global $CFG, $LW_CFG, $DB;
         
         $demographics = array();
         $userids = array();
@@ -123,13 +123,13 @@ class LW_Feedback  {
             return $demographics;
         }
 
-        $assignment = get_record("assignment", "id", $assignmentid);
+        $assignment = $DB->get_record('assignment', array('id', $assignmentid));
         if (!$assignment){
             $this->error->add_error('Demographics', $assignmentid, 'noassignmentfound');
             return $demographics;
         }
         
-        $category = get_record("user_info_category", "name", $LW_CFG->user_info_category);
+        $category = $DB->get_record('user_info_category', array('name'=>$LW_CFG->user_info_category));
         if (!$category){
             $this->error->add_error('Demographics', 0, 'nouserinfocategory');
             return $demographics;
@@ -176,7 +176,7 @@ class LW_Feedback  {
                 " AND u.id IN (".implode(',', $userids).") order by u.id";
             }
 
-            if ($items = get_records_sql($sql)) {
+            if ($items = $DB->get_records_sql($sql)) {
                 foreach ($items as $item) {
                     if (!empty($item->data)){
                         $demographics['demographic'][] = array(

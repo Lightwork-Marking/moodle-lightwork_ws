@@ -14,8 +14,8 @@
 class LW_Common {
     
     const CID = 'cid:';
-    const CAP_MANAGELWMARKERS  = 'moodle/local/lightwork:managelightworkmarkers';
-    const CAP_MARKLWSUBMISSIONS = 'moodle/local/lightwork:marklightworksubmissions';
+    const CAP_MANAGELWMARKERS  = 'local/lightwork:managelightworkmarkers';
+    const CAP_MARKLWSUBMISSIONS = 'local/lightwork:marklightworksubmissions';
     const STUDENT_MARKING = 1;
     const TEAM_MARKING = 2;
     const FEEDBACK = 3;

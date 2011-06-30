@@ -547,7 +547,7 @@ class mdl_soapserver extends server {
      * @param string $sesskey             The client session key.
      */
     function saveMarkingRubrics($saveMarkingRubrics, $sesskey) {
-        global $NUSOAP_SERVER, $CFG;
+        global $NUSOAP_SERVER, $CFG, $DB;
 
         $rrubrics = array('markingrubricresponses'=>array('markingrubricresponse'));
         $markingrubrics = array('markingrubric'=>array());
@@ -569,7 +569,7 @@ class mdl_soapserver extends server {
 
             foreach ($markingrubrics['markingrubric'] as $markingrubric) {
                 //check the assignment exists and the lightwork user capability.
-                $assignment = get_record("assignment", "id", $markingrubric['activity']);
+                $assignment = $DB->get_record('assignment', array('id'=>$markingrubric['activity']));
                 if (!$assignment){
                     $rubric->error->add_error('Assignment', $markingrubric['activity'], 'noassignmentfound');
                     continue;
@@ -1110,7 +1110,7 @@ class mdl_soapserver extends server {
      * or have been deleted by this method.
      */
     function repairLightworkData($sesskey, $ids) {
-        global $CFG;
+        global $CFG, $DB;
         
         $assignmentids = array(); // array to hold the input parameter assignment ids
         $currentassignments = array();  // associative array holding the assignment id and course id
@@ -1159,38 +1159,38 @@ class mdl_soapserver extends server {
         // check for deleted assignments
         foreach ($assignmentids as $assignmentid){
         	if (!in_array($assignmentid, $currentassignmentids)){
-        		if (!get_record("assignment", "id", $assignmentid)){
-        		    if (!delete_records('lw_marking_history', 'activity', $assignmentid)) {
+        		if (!$DB->get_record('assignment', array('id', $assignmentid))){
+        		    if (!$DB->delete_records('lw_marking_history', array('activity'=>$assignmentid))) {
                         $error->add_error('Marking History', $assignmentid, 'deletefailed');	
                     }
-        		    if (!delete_records('lw_marking', 'activity', $assignmentid)) {
+        		    if (!$DB->delete_records('lw_marking', array('activity'=>$assignmentid))) {
                         $error->add_error('Marking', $assignmentid, 'deletefailed');	
                     }
-        		    if (!delete_records('lw_team_marking_history', 'activity', $assignmentid)) {
+        		    if (!$DB->delete_records('lw_team_marking_history', array('activity'=>$assignmentid))) {
                         $error->add_error('Team Marking History', $assignmentid, 'deletefailed');	
                     }
-        		    if (!delete_records('lw_team_marking', 'activity', $assignmentid)) {
+        		    if (!$DB->delete_records('lw_team_marking', array('activity'=>$assignmentid))) {
                         $error->add_error('Team Marking', $assignmentid, 'deletefailed');	
                     }
-        		    if (!delete_records('lw_feedback', 'activity', $assignmentid)) {
+        		    if (!$DB->delete_records('lw_feedback', array('activity'=>$assignmentid))) {
                         $error->add_error('Feedback', $assignmentid, 'deletefailed');	
                     }                   
-        		    if (!delete_records('lw_rubric', 'activity', $assignmentid)) {
+        		    if (!$DB->delete_records('lw_rubric', array('activity'=>$assignmentid))) {
                         $error->add_error('Rubric', $assignmentid, 'deletefailed');	
                     }
                     //delete all team and team_student in this assignment
-                    $teams = get_records_sql("SELECT id, assignment, name, membershipopen".
+                    $teams = $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
                                  " FROM {$CFG->prefix}team ".
                                  " WHERE assignment = ".$assignmentid);
                     if ($teams) {
                         //delete all team_student in this team
                         foreach ($teams as $team) {
-                            if (! delete_records('team_student', 'team', $team->id)) {
+                            if (!$DB->delete_records('team_student', array('team'=>$team->id))) {
                                 $error->add_error('Team Student', $assignmentid, 'deletefailed');
                             }
                         }
                         //delete this team
-                        if (! delete_records('team', 'assignment', $assignmentid)) {
+                        if (!$DB->delete_records('team', array('assignment'=>$assignmentid))) {
                             $error->add_error('Team', $assignmentid, 'deletefailed');
                         }
                     }  
@@ -1210,17 +1210,17 @@ class mdl_soapserver extends server {
             
             //validate all assignment submission's course participants and user deletion.
             
-            if ($submissions = get_records_sql("SELECT id,  userid ".
+            if ($submissions = $DB->get_records_sql("SELECT id,  userid ".
                                                 " From {$CFG->prefix}assignment_submissions ".
                                                  "WHERE assignment = ". $assignment -> id)) {
                 foreach ($submissions as $submission) {
                     $checkedstudent = in_array($submission -> userid, $checkedparticipants);
-                    if (!$checkedstudent && !$student = get_record('user', 'id', $submission->userid)) {
+                    if (!$checkedstudent && !$student = $DB->get_record('user', array('id'=>$submission->userid))) {
                         $userdeletions['userdeletion'][] = array('id'=>$submission->userid);
                         $checkedparticipants[] = $submission -> userid;
                     }
                     $sql = get_student_participant_sql($submission->userid, $context->id);
-                    if ( $student && !$checkedstudent && !$participant = get_records_sql($sql)) {
+                    if ( $student && !$checkedstudent && !$participant = $DB->get_records_sql($sql)) {
                         $participantdeletions['participantdeletion'][] = array('id'=>$student ->id,
                                                                                'courseid'=>$assignment->courseid,
                                                                                'username'=>$student->username,
@@ -1239,16 +1239,16 @@ class mdl_soapserver extends server {
             } else {
                 $markingtablename = "lw_marking";
             }
-            if ($markingRecords = get_records_sql("SELECT id, marker, student, statuscode, rubric".
+            if ($markingRecords = $DB->get_records_sql("SELECT id, marker, student, statuscode, rubric".
                                                          " FROM {$CFG->prefix}$markingtablename ".
                                                          " WHERE activity = ".$assignment->id)){
                 foreach ($markingRecords as $marking) {
                     //For each marking check the marker and student in the user table, and the rubric and
                     //statuscode for validity.
-                    $marker = get_record('user','id',$marking->marker);
-                    $student = get_record('user','id',$marking->student);
-                    $statuscode = get_record('lw_marking_status', 'statuscode', $marking->statuscode);
-                    $rubric = get_record('lw_rubric','lwid',$marking->rubric,'activity',$assignment->id);
+                    $marker = $DB->get_record('user',array('id'=>$marking->marker));
+                    $student = $DB->get_record('user',array('id'=>$marking->student));
+                    $statuscode = $DB->get_record('lw_marking_status',array('statuscode'=>$marking->statuscode));
+                    $rubric = $DB->get_record('lw_rubric',array('lwid'=>$marking->rubric,'activity'=>$assignment->id));
                     
                     // sql string
                     $deletemarkingsql = marking_selection_sql($marking, $assignment);
@@ -1257,7 +1257,7 @@ class mdl_soapserver extends server {
                     
                     if (!$marker || !$student || !$statuscode || !$rubric) {
                         
-                        if (delete_records_select($markingtablename,$deletemarkingsql)){
+                        if ($DB->delete_records_select($markingtablename,$deletemarkingsql)){
                             $markingdeletions['markingdeletion'][] = get_marking_deletion($marking, $assignment);
                             // associated marking history is deleted below
                         } else {
@@ -1274,7 +1274,7 @@ class mdl_soapserver extends server {
                         }
                     }
                     if ($marker){
-                    	if (!$participant = get_records_sql($markerparticpantsql)) {
+                    	if (!$participant = $DB->get_records_sql($markerparticpantsql)) {
                             $participantdeletions['participantdeletion'][] = array('id'=>$marking->marker,
                                                                                    'courseid'=>$assignment->courseid,
                                                                                    'username'=>$marker->username,
@@ -1285,7 +1285,7 @@ class mdl_soapserver extends server {
                         }	
                     }
                     if ($student){
-                        if (!$participant = get_records_sql($studentparticpantsql)) {
+                        if (!$participant = $DB->get_records_sql($studentparticpantsql)) {
                             $participantdeletions['participantdeletion'][] = array('id'=>$marking->student,
                                                                                    'courseid'=>$assignment->courseid,
                                                                                    'username'=>$student->username,
@@ -1300,17 +1300,17 @@ class mdl_soapserver extends server {
             }// end of validating marking
                 
             //Pick up all the markingHistory records attached to this assignment
-            if ($markingHistoryRecords = get_records_sql("SELECT id, lwid, student, marker, rubric".
+            if ($markingHistoryRecords = $DB->get_records_sql("SELECT id, lwid, student, marker, rubric".
                                                          " FROM {$CFG->prefix}lw_marking_history ".
                                                          " WHERE activity = ".$assignment->id)){
                 foreach ($markingHistoryRecords as $markingHistory) {
                     //Check to make sure it has an associated marking with it, we don't need to check anything else
                     //because if the marking exists then the previous test checked it's validity.
-                    $marking = get_record('lw_marking', 'marker', $markingHistory->marker, 'student', $markingHistory->student,
-                                          'activity', $assignment->id);
+                    $marking = $DB->get_record('lw_marking', array('marker'=>$markingHistory->marker, 'student'=>$markingHistory->student,
+                                          'activity'=>$assignment->id));
                     if (!$marking) {
                         //Delete the marking history
-                        if (delete_records_select('lw_marking_history',
+                        if ($DB->delete_records_select('lw_marking_history',
                                            "lwid = {$markingHistory->lwid} ".
                                            "AND marker = {$markingHistory->marker} ".
                                            "AND student = {$markingHistory->student} ".
@@ -1330,7 +1330,7 @@ class mdl_soapserver extends server {
             }// end of validating marking history.
             
             //validate team and team_students in this assignment
-            $teams = get_records_sql("SELECT id, assignment, name, membershipopen".
+            $teams = $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
                                  " FROM {$CFG->prefix}team ".
                                  " WHERE assignment = ".$assignment->id);
             if ($teams) {
@@ -1338,9 +1338,9 @@ class mdl_soapserver extends server {
                     $members = get_members_from_team($team->id);
                     if ($members) {
                         foreach ($members as $member) {
-                            $student = get_record('user', 'id', $member->student);
+                            $student = $DB->get_record('user', array('id'=>$member->student));
                             if (!$student) {                                
-                                if (!delete_records('team_student', 'student', $member->student)) {
+                                if (!$DB->delete_records('team_student', array('student'=>$member->student))) {
                                     $error->add_error('Delete team student', $member->student, 'deletefailed');	
                                 } else {
                                     $userdeletions['userdeletion'][] = array('id'=>$member->student);
@@ -1348,7 +1348,7 @@ class mdl_soapserver extends server {
                                 }
                             } else {
                                 $sql = get_student_participant_sql($member->student,$context->id);
-                                if (!$participant = get_records_sql($sql)) {
+                                if (!$participant = $DB->get_records_sql($sql)) {
                                      $participantdeletions['participantdeletion'][] = array('id'=>$member->student,
                                                                                    'courseid'=>$assignment->courseid,
                                                                                    'username'=>$student->username,
@@ -1356,7 +1356,7 @@ class mdl_soapserver extends server {
                                                                                    'firstname'=>$student->firstname,
                                                                                    'lastname'=>$student->lastname,
                                                                                    'timemodified'=>$student->timemodified); 
-                                     if (!delete_records('team_student', 'student', $member->student)) {
+                                     if (!$DB->delete_records('team_student', array('student'=>$member->student))) {
                                          $error->add_error('Delete team student', $member->student, 'deletefailed');	
                                      } else {
                                          $teamstudentdeletions['teamstudentdeletion'][] = array('id'=> $member->id);
@@ -1364,7 +1364,7 @@ class mdl_soapserver extends server {
                                          $newmembers = get_members_from_team($team->id);
                                          if (!$newmembers) {
                                              //this means no records can find in this team. we should delete this team
-                                             if (! delete_records('team', 'id', $team->id,'assignment', $assignmentid)) {
+                                             if (! $DB->delete_records('team', array('id'=>$team->id,'assignment'=>$assignmentid))) {
                                                  $error->add_error('Team', $assignmentid, 'deletefailed');
                                              } else {           
                                                  $teamdeletions['teamdeletion'][] = array('id'=>$team->id);
@@ -1376,7 +1376,7 @@ class mdl_soapserver extends server {
                           }
                       } else {
                           //this team do not have any team members delete this team.
-                          if (! delete_records('team', 'id', $team->id,'assignment', $assignmentid)) {
+                          if (! $DB->delete_records('team', array('id'=>$team->id,'assignment'=>$assignmentid))) {
                               $error->add_error('Team', $assignmentid, 'deletefailed');
                           } else {
                               $teamdeletions['teamdeletion'][] = array('id'=>$team->id);
@@ -1386,18 +1386,18 @@ class mdl_soapserver extends server {
             } //end of validate team.
             
             //validate team marking
-            if ($teamMarkingRecords = get_records_sql("SELECT id, marker, activity, team, statuscode, rubric".
+            if ($teamMarkingRecords = $DB->get_records_sql("SELECT id, marker, activity, team, statuscode, rubric".
                                                          " FROM {$CFG->prefix}lw_team_marking ".
                                                          " WHERE activity = ".$assignment->id)){
                 foreach ($teamMarkingRecords as $marking) {
                     //For each marking check the marker and student in the user table, and the rubric and
                     //statuscode for validity.
-                    $marker = get_record('user','id',$marking->marker);
-                    $team = get_record('team','id',$marking->team, 'assignment', $marking->activity);
-                    $statuscode = get_record('lw_marking_status', 'statuscode', $marking->statuscode);
-                    $rubric = get_record('lw_rubric','lwid',$marking->rubric,'activity',$assignment->id);
+                    $marker = $DB->get_record('user',array('id'=>$marking->marker));
+                    $team = $DB->get_record('team',array('id'=>$marking->team, 'assignment'=>$marking->activity));
+                    $statuscode = $DB->get_record('lw_marking_status', array('statuscode'=>$marking->statuscode));
+                    $rubric = $DB->get_record('lw_rubric',array('lwid'=>$marking->rubric,'activity'=>$assignment->id));
                     if (!$marker || !$team || !$statuscode || !$rubric) {
-                        if (delete_records_select('lw_team_marking', 
+                        if ($DB->delete_records_select('lw_team_marking', 
                                            "marker = {$marking->marker} ".
                                            "AND team = {$marking->team} ".
                                            "AND rubric = {$marking->rubric} ".
@@ -1423,7 +1423,7 @@ class mdl_soapserver extends server {
                     }
                     if ($marker){
                         $sql = get_marker_participant_sql($marking, $context, $markingroles);
-                    	if (!$participant = get_records_sql($sql)) {
+                    	if (!$participant = $DB->get_records_sql($sql)) {
                             $participantdeletions['participantdeletion'][] = array('id'=>$marking->marker,
                                                                                    'courseid'=>$assignment->courseid,
                                                                                    'username'=>$marker->username,
@@ -1439,17 +1439,17 @@ class mdl_soapserver extends server {
             }//end of validating team marking.
             
             // validate team marking history
-            if ($teamMarkingHistoryRecords = get_records_sql("SELECT id, lwid, team, marker, rubric".
+            if ($teamMarkingHistoryRecords = $DB->get_records_sql("SELECT id, lwid, team, marker, rubric".
                                                          " FROM {$CFG->prefix}lw_team_marking_history ".
                                                          " WHERE activity = ".$assignment->id)){
                 foreach ($teamMarkingHistoryRecords as $markingHistory) {
                     //Check to make sure it has an associated marking with it, we don't need to check anything else
                     //because if the marking exists then the previous test checked it's validity.
-                    $marking = get_record('lw_team_marking', 'marker', $markingHistory->marker, 'team', $markingHistory->team,
-                                          'activity', $assignment->id);
+                    $marking = $DB->get_record('lw_team_marking', array('marker'=>$markingHistory->marker, 'team'=>$markingHistory->team,
+                                          'activity'=>$assignment->id));
                     if (!$marking) {
                         //Delete the marking history
-                        if (delete_records_select('lw_team_marking_history',
+                        if ($DB->delete_records_select('lw_team_marking_history',
                                            "lwid = {$markingHistory->lwid} ".
                                            "AND marker = {$markingHistory->marker} ".
                                            "AND team = {$markingHistory->team} ".
@@ -1514,7 +1514,7 @@ class mdl_soapserver extends server {
      * assignment belonging to the course) are included.
      */
     function getAssignmentTeams( $sesskey, $ids, $teamids , $timemodified, $allstudents ){
-        global $CFG;
+        global $CFG, $DB;
         $assignmentids = array();
         $teamidsholder = array();
         $response = array();
@@ -1536,33 +1536,24 @@ class mdl_soapserver extends server {
         //if lightwork set the teamids is 0, which means require to get
         // all teams from the give assignment.
         if (is_array($teamids['teamid'])) {
-            //error_log('team ids is array');
             if(count ($teamids['teamid']) == 1 && $teamids['teamid'][0] == 0) {
-                //error_log('this team ids array size 1 and has value 0');
                 $isallteams = true;
             }else {
-                //error_log('this team ids array size greater 1 or did have value 0');
                 $teamidsholder = $teamids['teamid'];
             }
         } elseif($teamids['teamid'] == 0) {
-            //error_log('this team id value is 0');
             $isallteams = true;
         }elseif($teamids['teamid']) {
-            //error_log('this team id  value is not 0');
             $teamidsholder = array($teamids['teamid']);
                   
         } else {
-            //error_log('team id required in getAssignmentTeams');
             return $this -> error ('team id required in getAssignmentTeams');
         }
 
         $errors = new LW_Error();
         foreach( $assignmentids as $assignment ) {
-            //error_log('assingmentid:'. $assignment);
-            $assignmentrec = get_record('assignment', 'id', $assignment);
+            $assignmentrec = $DB->get_record('assignment', array('id'=>$assignment));
             if (!$assignmentrec) {
-                //error_log("this assignment is not in moodle id: ". $assignment);
-                //$errors->add_error('assignment', $assignment, 'noassignmentfound');
                 continue;
             }   
             $context = get_context_instance(CONTEXT_COURSE, $assignmentrec->course);
@@ -1571,23 +1562,18 @@ class mdl_soapserver extends server {
             $teams = array();
             $team_recs = array();
             if ($isallteams) {
-                //error_log('get all teams from this assignment');
                 $teamSQL = " SELECT id, name, membershipopen, timemodified FROM {$CFG->prefix}team WHERE assignment = " . $assignment;
                 
                 if( $timemodified > 0 )
                     $teamSQL .= ' AND timemodified > ' . $timemodified;
                 $teamSQL .= ' ORDER BY assignment';
-                $team_recs = get_records_sql( $teamSQL );
+                $team_recs = $DB->get_records_sql( $teamSQL );
             } else {
-                //error_log('extract teams from team table');
                 foreach ($teamidsholder as $teamid) {
-                    $teamrecord = get_record('team', 'id', $teamid, 'assignment', $assignment);
+                    $teamrecord = $DB->get_record('team', array('id'=>$teamid, 'assignment'=>$assignment));
                     if(!$teamrecord) {
-                       // error_log('team not in moodle'. $teamid);
-                        //$errors->add_error('team', $teamid, 'wrnnoassignmentteams');
                         continue;
                     }
-                   // error_log('add team into team_recs '.$teamid );
                     $team_recs[] = $teamrecord;
                 }
             }           
@@ -1595,7 +1581,7 @@ class mdl_soapserver extends server {
                 foreach( $team_recs as $team ){
                     $students = array();
                     $student_recs = array();
-                    if( $student_recs = get_records('team_student', 'team', $team->id)){
+                    if( $student_recs = $DB->get_records('team_student', array('team'=>$team->id))){
                         $submittingAssignmentStudentsOnlySql = '';
                         if ($allstudents == 0){
                             $submittingAssignmentStudentsOnlySql = " AND u.id IN (SELECT sb.userid FROM ".
@@ -1604,7 +1590,7 @@ class mdl_soapserver extends server {
                                              "WHERE a.id= '$assignment' AND sb.data2 = 'submitted') ";
                         }
                         foreach( $student_recs as $student ){                     
-                            if ($participant = get_records_sql("SELECT u.id FROM {$CFG->prefix}user u INNER JOIN ".
+                            if ($participant = $DB->get_records_sql("SELECT u.id FROM {$CFG->prefix}user u INNER JOIN ".
                                 "{$CFG->prefix}role_assignments ra on u.id=ra.userid ".
                     	        "WHERE u.id = {$student->student} ".
                                 $submittingAssignmentStudentsOnlySql.
@@ -1660,7 +1646,7 @@ class mdl_soapserver extends server {
      * @return unknown_type
      */
     function getSubmissionReport($sesskey, $courseid, $startdate, $enddate){
-        global $CFG;
+        global $CFG, $DB;
         $response = array();
         $errors = new LW_Error();
         if (!$this->validate_session($sesskey)) {
@@ -1696,13 +1682,13 @@ class mdl_soapserver extends server {
                         $sql = $sql." and f.timemodified <= '$endtimestamp'";
                     }
                     
-                    if ($items = get_records_sql($sql)) {
+                    if ($items = $DB->get_records_sql($sql)) {
                         foreach ($items as $item) {
                             $markerfirstname = '';
                             $markerlastname = '';
                             $markerid = $item->marker;
                         	if (!empty($markerid)) {
-                        		if ($marker = get_record('user', 'id', $markerid)) {
+                        		if ($marker = $DB->get_record('user', array('id'=>$markerid))) {
                         			$markerfirstname = $marker->firstname;
                         			$markerlastname = $marker->lastname;
                         		}
@@ -1738,13 +1724,13 @@ class mdl_soapserver extends server {
                         $sql = $sql." and s.timemodified <= '$endtimestamp'";
                     }
                     
-                    if ($items = get_records_sql($sql)) {
+                    if ($items = $DB->get_records_sql($sql)) {
                         foreach ($items as $item) {
                             $markerfirstname = '';
                             $markerlastname = '';
                             $markerid = $item->marker; 
                         	if (!empty($markerid)) {
-                        		if ($marker = get_record('user', 'id', $markerid)) {
+                        		if ($marker = $DB->get_record('user', array('id', $markerid))) {
                         			$markerfirstname = $marker->firstname;
                         			$markerlastname = $marker->lastname;
                         		}
