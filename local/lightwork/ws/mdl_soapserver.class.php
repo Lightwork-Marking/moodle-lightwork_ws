@@ -985,7 +985,7 @@ class mdl_soapserver extends server {
      * @todo   check teach has access to actually upload these rubrics
      */
     function uploadAssignmentDocuments($sesskey, $assignmentfiles) {
-        global $NUSOAP_SERVER, $CFG;
+        global $NUSOAP_SERVER, $CFG, $DB;
 
         //  Validate the session
         if (!$this->validate_session($sesskey)) {
@@ -1004,7 +1004,7 @@ class mdl_soapserver extends server {
         foreach ($assignfiles['assignmentfile'] as $assignfile) {
             $assignmentid = $assignfile['assignmentid'];
             //check lightwork user capability
-            $assignment = get_record("assignment", "id", $assignmentid);
+            $assignment = $DB->get_record("assignment", array("id"=>$assignmentid));
             if (!$this->is_lightworkuser_by_assignment($assignment, $this->session->userid)) {
                 return new soap_fault('Client', '', self::UNAUTHORISED_MESSAGE);
             }

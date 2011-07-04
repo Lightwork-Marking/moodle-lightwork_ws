@@ -873,7 +873,8 @@ class LW_Marker  {
                             $markupdate->activity = clean_param($marking['activity'], PARAM_INT);
                             $markupdate->activitytype = clean_param($marking['activitytype'], PARAM_INT);
                             $markupdate->rubric = clean_param($marking['rubric'], PARAM_INT);
-                            $markupdate->xmltext = $this->helper->sanitiseXml($marking['xmltextref']);
+                            //$markupdate->xmltext = $this->helper->sanitiseXml($marking['xmltextref']);
+                            $markupdate->xmltext = $marking['xmltextref'];
                             $markupdate->statuscode = clean_param($marking['statuscode'], PARAM_ALPHA);
                             $markupdate->deleted = clean_param($marking['deleted'], PARAM_INT);
                             $markupdate->timemodified = time();
@@ -992,7 +993,8 @@ class LW_Marker  {
                             } 
                            // error_log('pass student validating');
                             $markupdate->rubric = clean_param($marking['rubric'], PARAM_INT);
-                            $markupdate->xmltext =$this->helper->sanitiseXml($marking['xmltextref']);
+                            //$markupdate->xmltext =$this->helper->sanitiseXml($marking['xmltextref']);
+                            $markupdate->xmltext = $marking['xmltextref'];
                             $markupdate->statuscode = clean_param($marking['statuscode'], PARAM_ALPHA);
                             $markupdate->deleted = clean_param($marking['deleted'], PARAM_INT);
                             $markupdate->timemodified = time();

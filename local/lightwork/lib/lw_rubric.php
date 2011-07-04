@@ -167,7 +167,8 @@ class LW_Rubric {
             if (!$rubric && $assignment) {
                 // insert a new rubric
                 $rubric = new object();
-                $rubric->xmltext = $this->helper->sanitiseXml($this->xmltext);
+                //$rubric->xmltext = $this->helper->sanitiseXml($this->xmltext);
+                $rubric->xmltext = $this->xmltext;
                 $rubric->activity = clean_param($this->activity, PARAM_INT);
                 $rubric->activitytype = clean_param($this->activitytype, PARAM_INT);
                 $rubric->complete = clean_param($this->complete, PARAM_INT);
@@ -193,7 +194,8 @@ class LW_Rubric {
             if ($rubric && $assignment) {
 
                 $this->id = $rubric->id;
-                $rubric->xmltext = $this->helper->sanitiseXml($this->xmltext);
+                //$rubric->xmltext = $this->helper->sanitiseXml($this->xmltext);
+                $rubric->xmltext = $this->xmltext;
                 $rubric->complete = clean_param($this->complete, PARAM_INT);
                 $rubric->deleted = clean_param($this->deleted, PARAM_INT);
                 $rubric->timemodified = time();
@@ -233,14 +235,16 @@ class LW_Rubric {
 
         if ($rubric && $assignment) {
             $this->id = $rubric->id;
-            $rubric->xmltext = $this->helper->sanitiseXml($this->xmltext);
+            //$rubric->xmltext = $this->helper->sanitiseXml($this->xmltext);
+            $rubric->xmltext = $this->xmltext;
             if ($DB->update_record('lw_rubric',$rubric)) {
                 return $this->id;
             }
         }
         elseif (!$rubric && $assignment) {
             $rubric = new object();
-            $rubric->xmltext = $this->helper->sanitiseXml($this->xmltext);
+            //$rubric->xmltext = $this->helper->sanitiseXml($this->xmltext);
+            $rubric->xmltext = $this->xmltext;
             $rubric->activity = clean_param($this->activity, PARAM_INT);
             $rubric->activitytype = clean_param($this->activitytype, PARAM_INT);
             $rubric->complete = 0;
