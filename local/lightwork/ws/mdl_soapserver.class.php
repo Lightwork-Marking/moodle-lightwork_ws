@@ -292,17 +292,6 @@ class mdl_soapserver extends server {
     }
 
     /**
-     * Get a list of courses for which a given user has the marker or marking manager capability
-     *
-     * @param string $sesskey The client session key.
-     * @param int    $timemodified Modified time
-     *
-     */
-    function getAllCourses($sesskey, $timemodified) {
-        return $this->getCourses($sesskey, array('courseid'=>''), $timemodified);
-    }
-
-    /**
      * Get a list of participants for a given course id or ids
      *
      * @param string $sesskey      The client session key.
@@ -1129,6 +1118,10 @@ class mdl_soapserver extends server {
         $errors = array();
         $error = new LW_Error();
         
+        include_once($CFG->libdir.'/ddllib.php');
+        $teamtable = new XMLDBTable('team');
+        $teamAssignmentTypeInstalled = table_exists($teamtable);
+        
         //  validate the input and make sure it is in an array
         if (is_array($ids['assignmentid'])) {
             $assignmentids = $ids['assignmentid'];
@@ -1142,13 +1135,13 @@ class mdl_soapserver extends server {
             return $this->fault;
         }        
         // return all courses that this user has access to
-        $rcourses = $this->getAllCourses($sesskey, 0);
-        if (!count($rcourses['courses'])){
+        $rcourses = $this->getCourses($sesskey, 0);
+        if (!count($rcourses['courses']['course'])){
             return new soap_fault('Client', '', self::UNAUTHORISED_MESSAGE);    
         }       
-        $courses = $rcourses['courses'];
+        $courses = $rcourses['courses']['course'];
         foreach ($courses as $course){
-            foreach ($course['assignments'] as $assignment) {
+            foreach ($course['assignments']['assignment'] as $assignment) {
                 $currentassignmentids[] = $assignment['id'];
                 $assignmentobject = new Object();
                 $assignmentobject->id = $assignment['id'];
@@ -1159,7 +1152,7 @@ class mdl_soapserver extends server {
         // check for deleted assignments
         foreach ($assignmentids as $assignmentid){
         	if (!in_array($assignmentid, $currentassignmentids)){
-        		if (!$DB->get_record('assignment', array('id', $assignmentid))){
+        		if (!$DB->get_record('assignment', array('id'=>$assignmentid))){
         		    if (!$DB->delete_records('lw_marking_history', array('activity'=>$assignmentid))) {
                         $error->add_error('Marking History', $assignmentid, 'deletefailed');	
                     }
@@ -1179,19 +1172,21 @@ class mdl_soapserver extends server {
                         $error->add_error('Rubric', $assignmentid, 'deletefailed');	
                     }
                     //delete all team and team_student in this assignment
-                    $teams = $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
+                    if ($teamAssignmentTypeInstalled) {
+                        $teams = $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
                                  " FROM {$CFG->prefix}team ".
                                  " WHERE assignment = ".$assignmentid);
-                    if ($teams) {
-                        //delete all team_student in this team
-                        foreach ($teams as $team) {
-                            if (!$DB->delete_records('team_student', array('team'=>$team->id))) {
-                                $error->add_error('Team Student', $assignmentid, 'deletefailed');
+                        if ($teams) {
+                            //delete all team_student in this team
+                            foreach ($teams as $team) {
+                                if (!$DB->delete_records('team_student', array('team'=>$team->id))) {
+                                    $error->add_error('Team Student', $assignmentid, 'deletefailed');
+                                }
                             }
-                        }
-                        //delete this team
-                        if (!$DB->delete_records('team', array('assignment'=>$assignmentid))) {
-                            $error->add_error('Team', $assignmentid, 'deletefailed');
+                            //delete this team
+                            if (!$DB->delete_records('team', array('assignment'=>$assignmentid))) {
+                                $error->add_error('Team', $assignmentid, 'deletefailed');
+                            }
                         }
                     }  
         		}
@@ -1329,62 +1324,64 @@ class mdl_soapserver extends server {
                 }
             }// end of validating marking history.
             
+            
             //validate team and team_students in this assignment
-            $teams = $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
+            if ($teamAssignmentTypeInstalled) {
+                $teams = $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
                                  " FROM {$CFG->prefix}team ".
                                  " WHERE assignment = ".$assignment->id);
-            if ($teams) {
-                foreach($teams as $team) {
-                    $members = get_members_from_team($team->id);
-                    if ($members) {
-                        foreach ($members as $member) {
-                            $student = $DB->get_record('user', array('id'=>$member->student));
-                            if (!$student) {                                
-                                if (!$DB->delete_records('team_student', array('student'=>$member->student))) {
-                                    $error->add_error('Delete team student', $member->student, 'deletefailed');	
+                if ($teams) {
+                    foreach($teams as $team) {
+                        $members = get_members_from_team($team->id);
+                        if ($members) {
+                            foreach ($members as $member) {
+                                $student = $DB->get_record('user', array('id'=>$member->student));
+                                if (!$student) {                                
+                                    if (!$DB->delete_records('team_student', array('student'=>$member->student))) {
+                                        $error->add_error('Delete team student', $member->student, 'deletefailed');	
+                                    } else {
+                                        $userdeletions['userdeletion'][] = array('id'=>$member->student);
+                                        $teamstudentdeletions['teamstudentdeletion'][] = array('id'=> $member->id);
+                                    }
                                 } else {
-                                    $userdeletions['userdeletion'][] = array('id'=>$member->student);
-                                    $teamstudentdeletions['teamstudentdeletion'][] = array('id'=> $member->id);
-                                }
-                            } else {
-                                $sql = get_student_participant_sql($member->student,$context->id);
-                                if (!$participant = $DB->get_records_sql($sql)) {
-                                     $participantdeletions['participantdeletion'][] = array('id'=>$member->student,
+                                    $sql = get_student_participant_sql($member->student,$context->id);
+                                    if (!$participant = $DB->get_records_sql($sql)) {
+                                         $participantdeletions['participantdeletion'][] = array('id'=>$member->student,
                                                                                    'courseid'=>$assignment->courseid,
                                                                                    'username'=>$student->username,
                                                                                    'idnumber'=>$student->idnumber,
                                                                                    'firstname'=>$student->firstname,
                                                                                    'lastname'=>$student->lastname,
                                                                                    'timemodified'=>$student->timemodified); 
-                                     if (!$DB->delete_records('team_student', array('student'=>$member->student))) {
-                                         $error->add_error('Delete team student', $member->student, 'deletefailed');	
-                                     } else {
-                                         $teamstudentdeletions['teamstudentdeletion'][] = array('id'=> $member->id);
-                                         //check any members is in this team.
-                                         $newmembers = get_members_from_team($team->id);
-                                         if (!$newmembers) {
+                                         if (!$DB->delete_records('team_student', array('student'=>$member->student))) {
+                                             $error->add_error('Delete team student', $member->student, 'deletefailed');	
+                                         } else {
+                                             $teamstudentdeletions['teamstudentdeletion'][] = array('id'=> $member->id);
+                                             //check any members is in this team.
+                                             $newmembers = get_members_from_team($team->id);
+                                             if (!$newmembers) {
                                              //this means no records can find in this team. we should delete this team
-                                             if (! $DB->delete_records('team', array('id'=>$team->id,'assignment'=>$assignmentid))) {
-                                                 $error->add_error('Team', $assignmentid, 'deletefailed');
-                                             } else {           
-                                                 $teamdeletions['teamdeletion'][] = array('id'=>$team->id);
+                                                 if (! $DB->delete_records('team', array('id'=>$team->id,'assignment'=>$assignmentid))) {
+                                                     $error->add_error('Team', $assignmentid, 'deletefailed');
+                                                 } else {           
+                                                     $teamdeletions['teamdeletion'][] = array('id'=>$team->id);
+                                                 }
                                              }
                                          }
-                                     }
-                                 }	
-                             }
-                          }
-                      } else {
-                          //this team do not have any team members delete this team.
-                          if (! $DB->delete_records('team', array('id'=>$team->id,'assignment'=>$assignmentid))) {
-                              $error->add_error('Team', $assignmentid, 'deletefailed');
+                                     }	
+                                 }
+                              }
                           } else {
+                              //this team do not have any team members delete this team.
+                              if (! $DB->delete_records('team', array('id'=>$team->id,'assignment'=>$assignmentid))) {
+                                  $error->add_error('Team', $assignmentid, 'deletefailed');
+                              } else {
                               $teamdeletions['teamdeletion'][] = array('id'=>$team->id);
-                          }
-                      }          
-                }
-            } //end of validate team.
-            
+                              }
+                          }          
+                    }
+                } //end of validate team.
+            }
             //validate team marking
             if ($teamMarkingRecords = $DB->get_records_sql("SELECT id, marker, activity, team, statuscode, rubric".
                                                          " FROM {$CFG->prefix}lw_team_marking ".
