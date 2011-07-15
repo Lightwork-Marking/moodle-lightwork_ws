@@ -51,7 +51,7 @@ class LW_Feedback  {
             return $rfeedbacksubmissions;
         }
 
-        $assignment = $DB->get_record('assignment', array('id', $assignmentid));
+        $assignment = $DB->get_record('assignment', array('id'=>$assignmentid));
         if (!$assignment){
             $this->error->add_error('Feedback', $assignmentid, 'noassignmentfound');
             return $rfeedbacksubmissions;
@@ -123,7 +123,7 @@ class LW_Feedback  {
             return $demographics;
         }
 
-        $assignment = $DB->get_record('assignment', array('id', $assignmentid));
+        $assignment = $DB->get_record('assignment', array('id'=>$assignmentid));
         if (!$assignment){
             $this->error->add_error('Demographics', $assignmentid, 'noassignmentfound');
             return $demographics;

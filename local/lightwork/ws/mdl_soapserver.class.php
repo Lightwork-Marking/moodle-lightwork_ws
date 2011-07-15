@@ -1727,7 +1727,7 @@ class mdl_soapserver extends server {
                             $markerlastname = '';
                             $markerid = $item->marker; 
                         	if (!empty($markerid)) {
-                        		if ($marker = $DB->get_record('user', array('id', $markerid))) {
+                        		if ($marker = $DB->get_record('user', array('id'=>$markerid))) {
                         			$markerfirstname = $marker->firstname;
                         			$markerlastname = $marker->lastname;
                         		}
@@ -1749,6 +1749,9 @@ class mdl_soapserver extends server {
                     }
                 }
             }
+        }
+        if (count($response['studentreportrecords'])<1){
+            $response['studentreportrecords'] = array();	
         }
         $response['errors'] = $errors->get_errors();
         return $response; 
