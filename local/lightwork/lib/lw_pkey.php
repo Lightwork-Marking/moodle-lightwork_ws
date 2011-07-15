@@ -155,15 +155,19 @@ class LW_pkey {
                     "emailAddress" => $CFG->supportemail
             );
         }
-        //var_dump($dn);
         // ensure we remove trailing slashes
         $dn["commonName"] = preg_replace(':/$:', '', $dn["commonName"]);
-
-        $new_key = openssl_pkey_new();
-
+        
         // Create a CSR so we can issue a key pair
-        $csr_rsc = openssl_csr_new($dn, $new_key, array('private_key_bits',2048));
-        $selfSignedCert = openssl_csr_sign($csr_rsc, null, $new_key, $days);
+        if (!empty($CFG->opensslcnf)){
+            $new_key = openssl_pkey_new(array("config"=>$CFG->opensslcnf));
+            $csr_rsc = openssl_csr_new($dn, $new_key, array("config"=>$CFG->opensslcnf,'private_key_bits'=>2048));
+            $selfSignedCert = openssl_csr_sign($csr_rsc, null, $new_key, $days, array("config"=>$CFG->opensslcnf));	
+        } else {
+            $new_key = openssl_pkey_new();
+            $csr_rsc = openssl_csr_new($dn, $new_key, array('private_key_bits'=>2048));
+            $selfSignedCert = openssl_csr_sign($csr_rsc, null, $new_key, $days);
+        }
         unset($csr_rsc); // Free up the resource
 
         // Export our self-signed certificate to a string for use as Public key
@@ -172,8 +176,11 @@ class LW_pkey {
         openssl_x509_free($selfSignedCert);
 
         // Export the private key as a PEM encoded string
-        // can protect it with an optional passphrase if you wish.
-        $export = openssl_pkey_export($new_key, $keypair['private'] /* , $passphrase */);
+        if (!empty($CFG->opensslcnf)){
+        	$export = openssl_pkey_export($new_key, $keypair['private'], null, array("config"=>$CFG->opensslcnf));
+        } else {
+            $export = openssl_pkey_export($new_key, $keypair['private'] );	
+        }        
         openssl_pkey_free($new_key);
         unset($new_key); // Free up the resource
 
