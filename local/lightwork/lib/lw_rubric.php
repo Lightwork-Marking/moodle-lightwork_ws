@@ -44,29 +44,6 @@ class LW_Rubric {
     }
 
     /**
-     * Delete a rubric as long as we have an activity and activity type
-     * @param  activity  integer id of the rubric activity id
-     * @param  activitytype  integer id of the rubric activity type
-     * @return   integer  saved rubric id if save ok, null if not
-     */
-    //function delete() {
-    //    $activityid = clean_param($this->activity, PARAM_INT);
-    //    if (!$activityid) {
-    //        return null; // cant save without an activity id
-    //    }
-   //     if (!$this->activitytype) {
-   //         return null; // cant save without an activity type
-   //     }
-   //     if ($result = delete_records('lw_rubric', 'activity', $activityid, 'activitytype',
-   //             clean_param($this->activitytype, PARAM_INT))) {
-   //         return true;
-   //     } else {
-   //         error_log('could not delete rubric for activity id: '.$activityid);
-   //         return null;
-   //     }
-   // }
-
-    /**
      * Load a LW Rubric by activity
      * @param  activity  integer id of the rubric activity id
      * @param  activitytype  integer id of the rubric activity type
@@ -277,33 +254,6 @@ class LW_Rubric {
     function to_pdf() {
         return "PDF";
     }
-
-    /**
-     * __get() is a magic method which gets called when a method is asked for which
-     * the class hasnt defined, we use it to fetch values for columns in the table
-     * so we dont have to define getter methods for each column
-     * @param $key        name of the column we want a value from
-     * @return string    value of field
-     */
-    //private function __get($key) {
-    //    return $this->fields[$key];
-    //}
-
-    /**
-     * __set() is a magic method which gets called when a method is asked for which
-     * the class hasnt defined, we use it to set values for columns in the table
-     * so we dont have to define setter methods for each column
-     * @param $key        name of the column we want a value from
-     * @param $value    value we want to set it to
-     * @return boolean    true if field present, false if not
-     */
-    //private function __set($key, $value) {
-    //    if (array_key_exists($key, $this->fields)) {
-    //        $this->fields[$key] = $value;
-    //        return true;
-    //    }
-    //    return false;
-    //}
 
 }
 

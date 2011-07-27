@@ -395,7 +395,7 @@ class mdl_soapserver extends server {
      *                    of submission ids or an int representing a single submission id
      */
     function getSubmissionFiles($sesskey, $assignmentid, $ids) {
-        global $NUSOAP_SERVER, $CFG;
+        global $NUSOAP_SERVER, $CFG, $DB;
 
         require_once($CFG->libdir.'/filelib.php');
 
@@ -407,7 +407,7 @@ class mdl_soapserver extends server {
         }
 
         //check that the user is authorised to get the submission files
-        $assignment = get_record("assignment", "id", $assignmentid);
+        $assignment = $DB->get_record("assignment", array('id'=>$assignmentid));
         if (!$this -> is_lightworkuser_by_assignment($assignment, $this->session->userid)) {
             return new soap_fault('Client', '', self::UNAUTHORISED_MESSAGE);
         }

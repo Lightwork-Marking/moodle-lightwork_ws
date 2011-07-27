@@ -19,9 +19,9 @@ if (!defined('MOODLE_INTERNAL')) {
 require_once('lw_document.php');
 
 function get_members_from_team ($teamid) {
-    global $CFG, $DB;
+    global $DB;
     return $DB->get_records_sql("SELECT id, student, timemodified".
-                                 " FROM {$CFG->prefix}team_student ".
+                                 " FROM {team_student} ".
                                  " WHERE team = ".$teamid);
 }
 
@@ -35,9 +35,9 @@ function is_in_markings($userid, $markings) {
 }
 
 function get_teams_in_assignment($assignmentid) {
-    global $CFG, $DB;
+    global $DB;
     return $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
-                                 " FROM {$CFG->prefix}team ".
+                                 " FROM {team} ".
                                  " WHERE assignment = ".$assignmentid);
 }
 

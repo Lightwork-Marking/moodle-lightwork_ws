@@ -15,7 +15,7 @@
 
     
     function delete_instance($assignment) {
-        global $CFG;
+        global $CFG, $DB;
 
         $assignment->courseid = $assignment->course;
 
@@ -25,46 +25,46 @@
         //1.delete lw_marking_history, lw_marking , lw_rubric 
         // team, and team_student records referencing this assignment 
         //2.delete rubric files from file dir
-        if (! delete_records('lw_marking_history', 'activity', $assignment->id)) {
+        if (! $DB->delete_records('lw_marking_history', array('activity'=>$assignment->id))) {
             $result = false;
         }
 
-        if (! delete_records('lw_marking', 'activity', $assignment->id)) {
+        if (! $DB->delete_records('lw_marking', array('activity'=>$assignment->id))) {
             $result = false;
         }
         
-        if (! delete_records('lw_feedback', 'activity', $assignment->id)) {
+        if (! $DB->delete_records('lw_feedback', array('activity'=>$assignment->id))) {
             $result = false;
         }
 
-        if (! delete_records('lw_rubric', 'activity', $assignment->id)) {
+        if (! $DB->delete_records('lw_rubric', array('activity'=>$assignment->id))) {
             $result = false;
         }
 
         //check assignment type
         $assignmenttype = $assignment -> assignmenttype;
         if ($assignmenttype == 'team') {
-            $teams = get_records_sql("SELECT id, assignment, name, membershipopen".
-                                 " FROM {$CFG->prefix}team ".
+            $teams = $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
+                                 " FROM {team} ".
                                  " WHERE assignment = ".$assignment->id);
             if ($teams) {
                 //delete all team_student in these teams
                 foreach ($teams as $team) {
-                    if (! delete_records('team_student', 'team', $team->id)) {
+                    if (! $DB->delete_records('team_student', array('team'=>$team->id))) {
                         $result = false;
                     }
                 }
                 //delete all teams
-                if (! delete_records('team', 'assignment', $assignment->id)) {
+                if (! $DB->delete_records('team', array('assignment'=>$assignment->id))) {
                     $result = false;
                 }
             }            
         }
         if ($assignmenttype == 'feedback') {
-            $submissions = get_records_sql("SELECT id FROM {$CFG->prefix}assignment_submissions".
+            $submissions = $DB->get_records_sql("SELECT id FROM {assignment_submissions}".
                                            " WHERE assignment = ".$assignment->id);
             foreach ($submissions as $submission){
-                if (!delete_records('feedback_submission', 'submission', $submission->id)) {
+                if (!$DB->delete_records('feedback_submission', array('submission'=>$submission->id))) {
                     $result = false;
                 }
             }        
@@ -74,15 +74,15 @@
         fulldelete($CFG->dataroot.'/'.$assignment->course.'/'.LW_document::LW_FOLDER_NAME.'/assignment/'.$assignment->id);
         // LIGHTWORK PATCH ENDS
 
-        if (! delete_records('assignment_submissions', 'assignment', $assignment->id)) {
+        if (! $DB->delete_records('assignment_submissions', array('assignment'=>$assignment->id))) {
             $result = false;
         }
 
-        if (! delete_records('assignment', 'id', $assignment->id)) {
+        if (! $DB->delete_records('assignment', array('id'=>$assignment->id))) {
             $result = false;
         }
 
-        if (! delete_records('event', 'modulename', 'assignment', 'instance', $assignment->id)) {
+        if (! $DB->delete_records('event', array('modulename'=>'assignment', 'instance'=>$assignment->id))) {
             $result = false;
         }
         

@@ -206,7 +206,7 @@ class LW_Marker  {
      */
 
     function assignment_submission_files($assignmentid, $assignmentsubmissionlist) {
-        global $CFG;
+        global $CFG, $DB;
 
         require_once("$CFG->dirroot/mod/assignment/lib.php");
          
@@ -229,8 +229,8 @@ class LW_Marker  {
         $assignmentsubmissions = $this->assignment_submissions_since($assignmentid,0,false, true);
 
         $cm = get_coursemodule_from_instance('assignment', $assignmentid);
-        $assignment = get_record("assignment", "id", $cm->instance);
-        $course = get_record("course", "id", $assignment->course);
+        $assignment = $DB->get_record('assignment', array('id'=>$cm->instance));
+        $course = $DB->get_record('course', array('id'=>$assignment->course));
         
         //  Get the assignment object
         require_once("$CFG->dirroot/mod/assignment/type/$assignment->assignmenttype/assignment.class.php");
@@ -281,7 +281,7 @@ class LW_Marker  {
                                 if ($useTii && $plagiarismsettings) {
                                     error_log("useTii && get_settings() returned true");
                                     $tiifile = get_record_select('tii_files', "course='".$course->id.
-                                                    "' AND module='".get_field('modules', 'id','name','assignment').
+                                                    "' AND module='".get_field('modules', 'id',array('name'=>'assignment')).
                                                     "' AND instance='".$cm->instance.
                                                     "' AND userid='".$submissionarr['userid'].
                                                     "' AND filename='".$file."'");
@@ -510,31 +510,31 @@ class LW_Marker  {
         $assignment = $DB->get_record('assignment', array('id'=>$assignmentid));
         if ($assignment->assignmenttype == LW_Common::FEEDBACK_TYPE){
             $sql = "SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid".
-                   " FROM {$CFG->prefix}user u INNER JOIN".
-                   " {$CFG->prefix}role_assignments ra on u.id=ra.userid".
+                   " FROM {user} u INNER JOIN".
+                   " {role_assignments} ra on u.id=ra.userid".
                    " WHERE ra.contextid = '$context->id'".
-                   " AND u.id IN (SELECT sb.userid FROM {$CFG->prefix}feedback_submission fs INNER JOIN ".
-                                  "{$CFG->prefix}assignment_submissions sb on fs.submission = sb.id INNER JOIN ".
-                                  "{$CFG->prefix}assignment a on sb.assignment=a.id ".
+                   " AND u.id IN (SELECT sb.userid FROM {feedback_submission} fs INNER JOIN ".
+                                  "{assignment_submissions} sb on fs.submission = sb.id INNER JOIN ".
+                                  "{assignment} a on sb.assignment=a.id ".
                                   "WHERE a.id= '$assignmentid' AND fs.timefirstsubmitted IS NOT NULL)".
                    $rolesql." AND (ra.timemodified >= '$timemodified' OR u.timemodified >= '$timemodified')";
         } else if (($assignment->assignmenttype == LW_Common::UPLOAD_TYPE || $assignment->assignmenttype == LW_Common::TEAM_TYPE)
                     && $assignment->var4 == 1){ // Advanced upload or team with send for marking set to yes
             $sql = "SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid".
-                   " FROM {$CFG->prefix}user u INNER JOIN".
-                   " {$CFG->prefix}role_assignments ra on u.id=ra.userid".
+                   " FROM {user} u INNER JOIN".
+                   " {role_assignments} ra on u.id=ra.userid".
                    " WHERE ra.contextid = '$context->id'".
-                   " AND u.id IN (SELECT sb.userid FROM {$CFG->prefix}assignment_submissions sb INNER JOIN ".
-                                  "{$CFG->prefix}assignment a on sb.assignment=a.id ".
+                   " AND u.id IN (SELECT sb.userid FROM {assignment_submissions} sb INNER JOIN ".
+                                  "{assignment} a on sb.assignment=a.id ".
                                   "WHERE a.id= '$assignmentid' AND sb.data2 = 'submitted')".
                    $rolesql." AND (ra.timemodified >= '$timemodified' OR u.timemodified >= '$timemodified')"; 
         } else {
             $sql = "SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid".
-                   " FROM {$CFG->prefix}user u INNER JOIN".
-                   " {$CFG->prefix}role_assignments ra on u.id=ra.userid".
+                   " FROM {user} u INNER JOIN".
+                   " {role_assignments} ra on u.id=ra.userid".
                    " WHERE ra.contextid = '$context->id'".
-                   " AND u.id IN (SELECT sb.userid FROM {$CFG->prefix}assignment_submissions sb INNER JOIN ".
-                                  "{$CFG->prefix}assignment a on sb.assignment=a.id ".
+                   " AND u.id IN (SELECT sb.userid FROM {assignment_submissions} sb INNER JOIN ".
+                                  "{assignment} a on sb.assignment=a.id ".
                                   "WHERE a.id= '$assignmentid')".
                    $rolesql." AND (ra.timemodified >= '$timemodified' OR u.timemodified >= '$timemodified')";	
         }
@@ -574,11 +574,11 @@ class LW_Marker  {
                               
         // get student participants has draft submissions or final submitted submissions.
         $sql = "SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid".
-                   " FROM {$CFG->prefix}user u INNER JOIN".
-                   " {$CFG->prefix}role_assignments ra on u.id=ra.userid".
+                   " FROM {user} u INNER JOIN".
+                   " {role_assignments} ra on u.id=ra.userid".
                    " WHERE ra.contextid = '$context->id'".
-                   " AND u.id IN (SELECT sb.userid FROM {$CFG->prefix}assignment_submissions sb INNER JOIN ".
-                                  "{$CFG->prefix}assignment a on sb.assignment=a.id ".
+                   " AND u.id IN (SELECT sb.userid FROM {assignment_submissions} sb INNER JOIN ".
+                                  "{assignment} a on sb.assignment=a.id ".
                                   "WHERE a.id= '$assignmentid' )".
                    $rolesql." AND (ra.timemodified >= '$timemodified' OR u.timemodified >= '$timemodified')"; 
         
@@ -603,7 +603,7 @@ class LW_Marker  {
     private function get_marking_allocation($assignmentId) {
         global $CFG, $DB;
         $allocation = $DB->get_records_sql("SELECT id,$this->markable as markable
-                                FROM {$CFG->prefix}$this->table
+                                FROM {".$this->table."}
                                 WHERE marker = '$this->uid' AND activity = '$assignmentId'");
         return $allocation;
     }
@@ -640,8 +640,8 @@ class LW_Marker  {
         }
 
         if ($roleparticipants = $DB->get_records_sql("SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid ".
-                                "FROM {$CFG->prefix}user u INNER JOIN ".
-                                "{$CFG->prefix}role_assignments ra on u.id=ra.userid ".
+                                "FROM {user} u INNER JOIN ".
+                                "{role_assignments} ra on u.id=ra.userid ".
                                 "WHERE ra.contextid = '$context->id' ".
                                 "AND (ra.timemodified >= '$timemodified' OR u.timemodified >= '$timemodified')".
         $rolesql
@@ -687,11 +687,11 @@ class LW_Marker  {
                               
         // get student participants who have submitted at least one assignment
         if ($students = $DB->get_records_sql("SELECT u.id,u.username,u.idnumber,u.firstname,u.lastname,u.timemodified,ra.roleid".
-                                " FROM {$CFG->prefix}user u INNER JOIN".
-                                " {$CFG->prefix}role_assignments ra on u.id=ra.userid".
+                                " FROM {user} u INNER JOIN".
+                                " {role_assignments} ra on u.id=ra.userid".
                                 " WHERE ra.contextid = '$context->id'".
-                                " AND u.id IN (SELECT sb.userid FROM {$CFG->prefix}assignment_submissions sb INNER JOIN ".
-                                             "{$CFG->prefix}assignment a on sb.assignment=a.id ".
+                                " AND u.id IN (SELECT sb.userid FROM {assignment_submissions} sb INNER JOIN ".
+                                             "{assignment} a on sb.assignment=a.id ".
                                              "WHERE a.course= '$courseid' AND sb.data2 = 'submitted')".
                                 $rolesql.
                                 " AND (ra.timemodified >= '$timemodified' OR u.timemodified >= '$timemodified')" )) {
@@ -952,7 +952,7 @@ class LW_Marker  {
                         // be added as parameters. However, only 1 rubric is allowed/assignment so this is ok.
                        // error_log('do update');
                         if ($rubric && $marker && $student && $assignment && $statuscode
-                        && $markupdate = get_record($this->table,'marker',$marking['marker'], $this->markable,$marking['markable'],'activity',$marking['activity'])) {
+                        && $markupdate = $DB->get_record($this->table,array('marker'=>$marking['marker'], $this->markable=>$marking['markable'],'activity'=>$marking['activity']))) {
 
                             // Is the student currently a course participant. If this is not a release, send
                             // an error message as a warning but continue with the update. If it's a release, abort with an error
@@ -999,7 +999,7 @@ class LW_Marker  {
                             $markupdate->deleted = clean_param($marking['deleted'], PARAM_INT);
                             $markupdate->timemodified = time();
                            // error_log('update  marking');
-                            if (!update_record($this->table,$markupdate)) {
+                            if (!$DB->update_record($this->table,$markupdate)) {
                                 error_log('update fail id ->'.$marking['markable']);
                                 $this->error->add_error('Marking', $marking['activity'], 'errsysupdatemarking');
                             }
@@ -1024,7 +1024,7 @@ class LW_Marker  {
                                         $markhistoryupdate->timemodified = $markupdate->timemodified;
 
                                         //  Insert the history record
-                                        if (!insert_record($this->historytable,$markhistoryupdate,true)) {
+                                        if (!$DB->insert_record($this->historytable,$markhistoryupdate,true)) {
                                            // error_log('insert marking history fails');
                                             error_log("insert history record fail: markable id ->".$marking['markable']." assignment id ->".$markhistoryupdate->activity." status code -> ".$markhistoryupdate->statuscode);
                                             $this->error->add_error('MarkingHistory', $markinghistory['lwid'], 'errsysaddmarkinghistory');
@@ -1325,7 +1325,7 @@ class LW_Marker  {
 
         foreach ($historyids as $id) {
             $sql = "SELECT id,lwid,statuscode,timemodified,comment".
-                " FROM {$CFG->prefix}$this->historytable ".
+                " FROM {".$this->historytable."} ".
                 " WHERE marker = ".$id['marker'].
                 " AND   $this->markable = ".$id['markable'].
                 " AND   rubric = ".$id['rubric'].
@@ -1376,7 +1376,7 @@ class LW_Marker  {
             $wherein = ' AND activity IN ('. implode(',',$activityids) .')';
         }
         $sql = "SELECT id,lwid,activity,activitytype,xmltext,complete,deleted,timemodified".
-               " FROM {$CFG->prefix}lw_rubric ".
+               " FROM {lw_rubric} ".
                " WHERE activitytype = '$activitytype' ".
         $wherein.$wheretime.
                " ORDER BY activity,lwid";
@@ -1419,11 +1419,11 @@ class LW_Marker  {
      * @return int the number of marking records modified since $timemodified
      */
     public function getModifiedMarkingCount($assignmentids, $timemodified){
-        global $CFG;
-        $sql = "SELECT COUNT(*) AS count from {$CFG->prefix}$this->table".
+        global $CFG, $DB;
+        $sql = "SELECT COUNT(*) AS count from {".$this->table."}".
                " WHERE timemodified > $timemodified".
                " AND activity IN (".implode(',', $assignmentids).")";
-        $item = get_record_sql($sql);
+        $item = $DB->get_record_sql($sql);
         return $item->count;    
     }
 
@@ -1461,7 +1461,7 @@ class LW_Marker  {
             $wheretime = ($timemodified > 0) ? " AND timemodified > $timemodified " : '';
 
             $sql = "SELECT id,marker,$this->markable as markable,rubric,activity,activitytype,xmltext,deleted,statuscode,timemodified ".
-                " FROM {$CFG->prefix}$this->table WHERE activitytype = '$activitytype' ";
+                " FROM {".$this->table."} WHERE activitytype = '$activitytype' ";
 
             $where = " AND activity = '$activityid'";
             
@@ -1498,49 +1498,6 @@ class LW_Marker  {
 
         return $rmarkings;
     }
-
-
-    // All functions below (with exception of get_record <table_name> could be moved to a base object
-    // Not sure if we will need the function below?
-
-    /**
-     * __get() is a magic method which gets called when a method is asked for which
-     * the class hasnt defined, we use it to fetch values for columns in the table
-     * so we dont have to define getter methods for each column
-     * @param $key        name of the column we want a value from
-     * @return string    value of field
-     */
-    //private function __get( $key )  {
-    //    $returnvalue = null;
-    //    $classvars = get_class_vars(get_class($this));
-//
-   //     if (array_key_exists($key, $classvars)) {
-   //         $returnvalue = $this->{$key};
-   //     }
-//
-     //   return $returnvalue;
-    //}
-
-
-    /**
-     * __set() is a magic method which gets called when a method is asked for which
-     * the class hasnt defined, we use it to set values for columns in the table
-     * so we dont have to define setter methods for each column
-     * @param $key        name of the column we want a value from
-     * @param $value    value we want to set it to
-     * @return boolean    true if field present, false if not
-     */
-   // private function __set( $key, $value )  {
-   //     $returnvalue = false;
-   //     $classvars = get_class_vars(get_class($this));
-//
-    //    if (array_key_exists($key, $classvars)) {
-    //        $this->{$key} = $value;
-    //        $returnvalue = true;
-    //    }
-//
-   //     return $returnvalue;
-    //}
      
 }
 

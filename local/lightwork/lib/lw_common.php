@@ -47,8 +47,8 @@ class LW_Common {
     function get_submitting_assignment_students_only_sql($assignmentId) {
         global $CFG;
         return "IN (SELECT sb.userid FROM ".
-               "{$CFG->prefix}assignment_submissions sb INNER JOIN ".
-               "{$CFG->prefix}assignment a on sb.assignment=a.id ".
+               "{assignment_submissions} sb INNER JOIN ".
+               "{assignment} a on sb.assignment=a.id ".
                "WHERE a.id= '$assignmentId' AND sb.data2 = 'submitted')";
     }
 }

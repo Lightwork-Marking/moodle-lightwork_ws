@@ -70,16 +70,16 @@ class LW_Feedback  {
             if ($iscoordinator) {
                 $sql = "SELECT fs.id,fs.submission,fs.paper,fs.duedate,fs.topic,fs.wordlimit,".
                 "fs.referencingstyle,fs.questions,fs.difficulties,fs.timefirstsubmitted,fs.timemodified".
-                " FROM {$CFG->prefix}FEEDBACK_SUBMISSION fs INNER JOIN {$CFG->prefix}ASSIGNMENT_SUBMISSIONS a".
+                " FROM {FEEDBACK_SUBMISSION} fs INNER JOIN {ASSIGNMENT_SUBMISSIONS} a".
                 " ON fs.submission = a.id".
                 " WHERE fs.timefirstsubmitted IS NOT NULL".
                 " AND a.assignment = '$assignmentid'";
             } else {
                 $sql = "SELECT fs.id,fs.submission,fs.paper,fs.duedate,fs.topic,fs.wordlimit,".
                 "fs.referencingstyle,fs.questions,fs.difficulties,fs.timefirstsubmitted,fs.timemodified".
-                " FROM {$CFG->prefix}FEEDBACK_SUBMISSION fs INNER JOIN {$CFG->prefix}ASSIGNMENT_SUBMISSIONS a".
+                " FROM {FEEDBACK_SUBMISSION} fs INNER JOIN {ASSIGNMENT_SUBMISSIONS} a".
                 " ON fs.submission = a.id".
-                " INNER JOIN {$CFG->prefix}LW_FEEDBACK f".
+                " INNER JOIN {LW_FEEDBACK} f".
                 " ON (a.assignment = f.activity AND a.userid = f.student)".
                 " WHERE a.assignment = '$assignmentid'".
                 " AND f.marker = '{$this->uid}'";
@@ -155,20 +155,20 @@ class LW_Feedback  {
             $submittedstatus = LW_Common::SUBMITTED;
             $sql = '';
             if ($iscoordinator){
-                $sql = "SELECT uid.id,u.id AS userid,uid.data,uif.shortname,u.timemodified FROM {$CFG->prefix}USER_INFO_DATA uid".
-                " INNER JOIN {$CFG->prefix}USER_INFO_FIELD uif ON uid.fieldid = uif.id".
-                " INNER JOIN {$CFG->prefix}USER u ON uid.userid = u.id".
-                " INNER JOIN {$CFG->prefix}ASSIGNMENT_SUBMISSIONS s ON u.id=s.userid".
+                $sql = "SELECT uid.id,u.id AS userid,uid.data,uif.shortname,u.timemodified FROM {USER_INFO_DATA} uid".
+                " INNER JOIN {USER_INFO_FIELD} uif ON uid.fieldid = uif.id".
+                " INNER JOIN {USER} u ON uid.userid = u.id".
+                " INNER JOIN {ASSIGNMENT_SUBMISSIONS} s ON u.id=s.userid".
                 " WHERE s.assignment = '$assignmentid'".
                 " AND s.data2 = '$submittedstatus'".
                 " AND uif.categoryid = '$category->id'".
                 " AND u.id IN (".implode(',', $userids).") order by u.id";
             } else { // pre reader
-                $sql = "SELECT uid.id,u.id AS userid,uid.data,uif.shortname,u.timemodified FROM {$CFG->prefix}USER_INFO_DATA uid".
-                " INNER JOIN {$CFG->prefix}USER_INFO_FIELD uif ON uid.fieldid = uif.id".
-                " INNER JOIN {$CFG->prefix}USER u ON uid.userid = u.id".
-                " INNER JOIN {$CFG->prefix}ASSIGNMENT_SUBMISSIONS s ON u.id=s.userid".
-                " INNER JOIN {$CFG->prefix}LW_FEEDBACK fb ON s.userid=fb.student".
+                $sql = "SELECT uid.id,u.id AS userid,uid.data,uif.shortname,u.timemodified FROM {USER_INFO_DATA} uid".
+                " INNER JOIN {USER_INFO_FIELD} uif ON uid.fieldid = uif.id".
+                " INNER JOIN {USER} u ON uid.userid = u.id".
+                " INNER JOIN {ASSIGNMENT_SUBMISSIONS} s ON u.id=s.userid".
+                " INNER JOIN {LW_FEEDBACK} fb ON s.userid=fb.student".
                 " WHERE s.assignment = '$assignmentid'".
                 " AND s.data2 = '$submittedstatus'".
                 " AND fb.statuscode != 'RL'".
