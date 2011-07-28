@@ -100,6 +100,7 @@ class LW_Marker  {
      * @param   int       $timemodified   Modified time
      * @param   bool      $getall         The function will return all submission allow for this user.  You still to pass $assigmentlist ("0" is a good value)
      * @return  array     $submissions    Array of course objects
+     * TODO remove getall parameter if not needed
      */
     function assignment_submissions_since($assignmentlist, $timemodified, $getall=false, $allstudents) {
         global $CFG, $DB;
@@ -225,7 +226,7 @@ class LW_Marker  {
         if (!isset($assignmentid)){
             return new soap_fault('Client', '', 'assignment_submission_files expects an assignment id');
         }
-         
+        
         $assignmentsubmissions = $this->assignment_submissions_since($assignmentid,0,false, true);
 
         $cm = get_coursemodule_from_instance('assignment', $assignmentid);
@@ -239,8 +240,7 @@ class LW_Marker  {
 
         include_once($CFG->libdir.'/ddllib.php');
         $tiifiletable = new XMLDBTable('tii_files');
-        $useTii = $this->is_tii_type_assignment($assignment)
-                  && table_exists($tiifiletable);
+        $useTii = $this->is_tii_type_assignment($assignment) && table_exists($tiifiletable);
                   
         $plagiarismsettings = false;
         if ($useTii) {
@@ -249,58 +249,55 @@ class LW_Marker  {
             $plagiarismsettings = get_settings();
         }
         if ( $this->is_allowed_assignment_type($assignment) ) {
+        	// TODO fix so that this works for teams
+        	$fs = get_file_storage();
             foreach ($assignmentsubmissions['assignment'][0]['submissions'] as $submissionarr) {
                 if (in_array($submissionarr['id'], $assignmentsubmissionids)) {
                     $idsfound[] = $submissionarr['id'];
                     if ($assignment->assignmenttype == 'team'){
                         $team = $assignmentinstance->get_user_team($submissionarr['userid']);
                         if (!isset($team)) {
-                            //$this->error->add_error('Submission', $submissionarr['userid'], 'teammembershipchanged');
-                            //We donot give any error. we handle this type of error by comparing the LW team 
-                            //and Moodle team after finishing assignment file submission synchronization.
+                            //We handle this by comparing the local and Moodle team 
+                            //after finishing assignment file submission synchronization.
                             continue;
                         }
                         $basedir = $assignmentinstance->team_file_area_name($team->id);
                     } else {
-                        $basedir = $assignmentinstance->file_area_name($submissionarr['userid']);
+                        $is_empty = $fs->is_area_empty($assignmentinstance->context->id,'mod_assignment','submission',$submissionarr['id']);                        
                     }
-                    if ($basedir) {
-                        if ($files = get_directory_list($CFG->dataroot.'/'.$basedir,'',true,false,true)) {
+                    if (!$is_empty) {
+                    	$files = $fs->get_area_files($assignmentinstance->context->id,'mod_assignment','submission',$submissionarr['id'],false);
 
-                            $submission = array(
+                        $submission = array(
                                     'id'          => $submissionarr['id'],
                                     'fileref'     => $submissionarr['userid'].'/'. md5(uniqid(time())) .'.zip',
                                     'mime'        => 'application/zip',
                                     'status'      => $submissionarr['status'],
                                     'timemodified'=> $submissionarr['timemodified'],
                                     'files'       => array()
-                            );
+                        );
 
-                            foreach ($files as $key => $file) {
-                                $submission['files'][] = $CFG->dataroot.'/'.$basedir.'/'.$file;
-                                if ($useTii && $plagiarismsettings) {
-                                    error_log("useTii && get_settings() returned true");
-                                    $tiifile = get_record_select('tii_files', "course='".$course->id.
-                                                    "' AND module='".get_field('modules', 'id',array('name'=>'assignment')).
-                                                    "' AND instance='".$cm->instance.
-                                                    "' AND userid='".$submissionarr['userid'].
-                                                    "' AND filename='".$file."'");
+                        foreach ($files as $file) {
+                            $submission['files'][$file->get_filename()] = $file;
+                            if ($useTii && $plagiarismsettings) {
+                                $tiifile = get_record_select('tii_files', "course='".$course->id.
+                                                "' AND module='".get_field('modules', 'id',array('name'=>'assignment')).
+                                                "' AND instance='".$cm->instance.
+                                                "' AND userid='".$submissionarr['userid'].
+                                                "' AND filename='".$file."'");
                                      
-                                    if (isset($tiifile->tiiscore) && $tiifile->tiicode=='success' ) {
-                                        $tiilink = tii_get_report_link($tiifile) ;
-                                        error_log("tii_get_report_link successful");
-                                        $rsubmissionsandtiilinks['tiifiles']['tiifile'][] = array( 'id' => $tiifile->id,
+                                if (isset($tiifile->tiiscore) && $tiifile->tiicode=='success' ) {
+                                    $tiilink = tii_get_report_link($tiifile) ;
+                                    $rsubmissionsandtiilinks['tiifiles']['tiifile'][] = array( 'id' => $tiifile->id,
                                	            'submissionid' => $submissionarr['id'],
                                             'filename' => $tiifile -> filename,
                                             'tiiscore' => $tiifile -> tiiscore,
                                             'tiicode' => $tiifile -> tiicode,
                                             'tiilink' => $tiilink );
-                                    }
                                 }
                             }
-
-                            $rsubmissionsandtiilinks['submissionfiles']['submissionfile'][] = $submission;
                         }
+                        $rsubmissionsandtiilinks['submissionfiles']['submissionfile'][] = $submission;
                     }
                 }
             }
@@ -873,7 +870,6 @@ class LW_Marker  {
                             $markupdate->activity = clean_param($marking['activity'], PARAM_INT);
                             $markupdate->activitytype = clean_param($marking['activitytype'], PARAM_INT);
                             $markupdate->rubric = clean_param($marking['rubric'], PARAM_INT);
-                            //$markupdate->xmltext = $this->helper->sanitiseXml($marking['xmltextref']);
                             $markupdate->xmltext = $marking['xmltextref'];
                             $markupdate->statuscode = clean_param($marking['statuscode'], PARAM_ALPHA);
                             $markupdate->deleted = clean_param($marking['deleted'], PARAM_INT);
@@ -993,7 +989,6 @@ class LW_Marker  {
                             } 
                            // error_log('pass student validating');
                             $markupdate->rubric = clean_param($marking['rubric'], PARAM_INT);
-                            //$markupdate->xmltext =$this->helper->sanitiseXml($marking['xmltextref']);
                             $markupdate->xmltext = $marking['xmltextref'];
                             $markupdate->statuscode = clean_param($marking['statuscode'], PARAM_ALPHA);
                             $markupdate->deleted = clean_param($marking['deleted'], PARAM_INT);

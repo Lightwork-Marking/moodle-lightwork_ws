@@ -19,12 +19,6 @@ require_once($CFG->dirroot . '/local/lightwork/lib/lw_common.php'); // Include t
 
 class lw_common_test extends UnitTestCase {
 
-    function testSanitiseXml() {
-        $this->assertEqual($this->helper->sanitiseXml("simpletest"), "simpletest");
-        $this->assertEqual($this->helper->sanitiseXml("simpletest o'reilly"), "simpletest o\'reilly");
-        $this->assertEqual($this->helper->sanitiseXml("simpletest\x96test"), "simpletest-test");
-    }
-
     public function setUp() {
         $this->helper = new LW_Common();
     }

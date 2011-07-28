@@ -429,17 +429,16 @@ class mdl_soapserver extends server {
     }
 
     private function zip_submission_file($submissionfile) {
-        global $NUSOAP_SERVER, $CFG;
+        global $NUSOAP_SERVER, $CFG;        
         $tmpzipfile = $CFG->dataroot .'/'. md5(uniqid(time())) .'.zip';
-        zip_files($submissionfile['files'], $tmpzipfile);
+        $zippacker = get_file_packer('application/zip');
+        $zippacker->archive_to_pathname($submissionfile['files'], $tmpzipfile);        
         $data = '';
         if ($fd = fopen($tmpzipfile, 'rb')) {
             $data = fread($fd, filesize($tmpzipfile));
             fclose($fd);
         }
         $NUSOAP_SERVER->addAttachment($data,$tmpzipfile,$submissionfile['mime'], $submissionfile['fileref']);
-
-        //  Delete the tmp zip file
         unlink($tmpzipfile);
     }
 
