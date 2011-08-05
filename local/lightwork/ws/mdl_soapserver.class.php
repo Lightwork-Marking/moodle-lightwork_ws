@@ -961,16 +961,11 @@ class mdl_soapserver extends server {
     }
         
     /**
-     * Insert/Update a list of files to be associated with assignments
-     *
-     * At present we are only expecting a single file, a PDF rendering of
-     * the assignment rubric to be presented to students through the Moodle
-     * web interface. The PDF iself is rendered and managed in the LightWork
-     * client.
+     * Insert/Update a list of files to be associated with assignments and created
+     * as resources in Moodle
      *
      * @param string $sesskey             The client session key
      * @param array  $assignmentfile      Array of assignment id(s) and the file(s) to be uploaded
-     * @todo   check teach has access to actually upload these rubrics
      */
     function uploadAssignmentDocuments($sesskey, $assignmentfiles) {
         global $NUSOAP_SERVER, $CFG, $DB;
@@ -1013,7 +1008,9 @@ class mdl_soapserver extends server {
                 $cid = '<'.$file['fileref'].'>';
                 foreach ($attachments as $attachment) {
                     if ($cid == $attachment['cid']) {
-                        $lw_doc->document_save_file($attachment['data'], $file['filename']);
+                        $lw_doc->document_save_file($attachment['data'], 
+                                                    $file['filename'],
+                                                    $this->session->userid);
                         break;
                     }
                 }

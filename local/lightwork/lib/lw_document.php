@@ -109,35 +109,100 @@ class LW_document {
     }
 
     /**
-     * Saves the rubric pdf data stream to file in the dataroot directory
-     *
-     * @param   binary  $data   pdf content as a binary value
-     * @return  bool    true if saved, false if not
+     * Saves a file as a resource for the assignment
+     * @param binary $data
+     * @param string $docname
+     * TODO catch and throw failure exceptions
      */
-    function document_save_file($data, $docname) {
-        $status = false;
+    function document_save_file($data, $docname, $docowner) {
+    	global $DB, $CFG;
+    	require_once("$CFG->dirroot/mod/resource/lib.php");
+        $fs = get_file_storage();
+        error_log('document_save_file $docname: '.$docname);
+        // check that the resource exists and create it if it doesn't
+        // 1. Find the section in mdl_course_modules
+        $cm = get_coursemodule_from_instance('assignment', $this->assignmentid, $this->courseid);
+        $cm->section;
+        error_log('document_save_file $cm->section: '.$cm->section);
+        $resourcemodules = get_coursemodules_in_course('resource', $this->courseid);
+        $resourcemodule;
+        $fileinfo = array('component'=>'mod_resource',
+                          'filearea'=>'content',
+                          'itemid'=>0,
+                          'filepath'=>'/',
+                          'filename'=>$docname,
+                          'userid'=>$docowner,
+                          'sortorder'=>1);
+        foreach ($resourcemodules as $rm){
+            if ($rm->section == $cm->section){
+            	// get context id
+            	$context = get_context_instance(CONTEXT_MODULE, $resourcemodule->id);
+            	$fileinfo['contextid']= $context->id;                                  
+            	$file = $fs->get_file($fileinfo->contextid, 
+                              $fileinfo->component, 
+                              $fileinfo->filearea,         
+                              $fileinfo->itemid, 
+                              $fileinfo->filepath, 
+                              $fileinfo->filename);            	
+            	if ($file){
+            	    error_log('document_save_file $file: '.print_r($file, TRUE));
+            	    break;
+            	}           	 
+            }	
+        }
 
-        if (strpos($docname, "/") === false) {
-            $relativepath = $this->relative_path;
+        if ($file){
+        	$file->delete();
         } else {
-            $relativepath = $this->relative_path . '/' . dirname($docname);
-        }
-
-        if (! $basedir = make_upload_directory($relativepath)) {
-            $this->error->add_error('Document', '0', 'dircannotbecreated');
-            return false;    //Cannot be created, so error
-        }
+        	// create the rubric resource, course module and context
+        	// should all be done within a database transaction
+        	require_once("$CFG->dirroot/course/lib.php");
+        	require_once("$CFG->dirroot/mod/resource/locallib.php");
+        	$rcm = new object();
+        	$rcm->course = clean_param($this->courseid, PARAM_INT);
+        	$rcm->module = 14; // resource module
+        	$rcm->instance = 0; // value set when resource is created
+        	$rcm->section = $cm->section;
+        	$rcm->score = 0;
+        	$rcm->indent = 0;
+        	$rcm->visible = true;
+        	$rcm->visibleold = true;
+        	$rcm->groupmode = 0;
+        	$rcm->groupingid = 0;
+        	$rcm->groupmembersonly = 0;
+        	$rcm->completion = false;
+        	$rcm->completionview = false;
+        	$rcm->completionexpected = 0;
+        	$rcm->availablefrom = 0;
+        	$rcm->availableuntil = 0;
+        	$rcm->showavailability = false;
+        	$rcmid = add_course_module($rcm);
+        	error_log('document_save_file $rcmid: '.$rcmid);
+        	
+        	$resource = new object();
+        	$resource->coursemodule = $rcmid;
+        	$resource->course = clean_param($this->courseid, PARAM_INT);
+        	$resource->name = $docname;
+        	$resource->introformat = 0;
+        	$resource->tobemigrated = 0;
+        	$resource->legacyfiles = 0;
+        	$resource->display = 0;
+        	$resource->filterfiles = 0;
+        	$resource->revision = 1;        	
+        	$resourceid = resource_add_instance($resource, null);
+        	error_log('document_save_file $resourceid: '.$resourceid);
+        	
+        	// creates context
+        	$context = get_context_instance(CONTEXT_MODULE, $rcmid);
+        	$fileinfo['contextid']= $context->id;
+        }        
         
-        $filename = $this->absolute_path.'/'.$docname;
-        $file = fopen($filename, "w");
-        if ($file) {
-            $status = fwrite($file, $this->helper->sanitise_for_msoffice2007($filename, $data));
-            fclose($file);
-        } else {
-            $this->error->add_error('Document', '0', 'cannotopenfile');
-            return false;
-        }
-        return $status;
+        $fs->create_file_from_string($fileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
+        
+        // TODO throw exception and log error if file cannot be saved
+        //$this->error->add_error('Document', '0', 'dircannotbecreated');
+        //$this->error->add_error('Document', '0', 'cannotopenfile');
+        
     }
 
     /**
