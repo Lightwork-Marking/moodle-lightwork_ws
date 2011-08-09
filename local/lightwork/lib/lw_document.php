@@ -115,44 +115,59 @@ class LW_document {
      * TODO catch and throw failure exceptions
      */
     function document_save_file($data, $docname, $docowner) {
-    	global $DB, $CFG;
+    	global $DB, $CFG, $USER;
     	require_once("$CFG->dirroot/mod/resource/lib.php");
+    	require_once("$CFG->dirroot/mod/resource/locallib.php");
+    	require_once("$CFG->dirroot/course/lib.php");
+    	
+    	$USER->id = $docowner;
         $fs = get_file_storage();
         error_log('document_save_file $docname: '.$docname);
-        // check that the resource exists and create it if it doesn't
-        // 1. Find the section in mdl_course_modules
-        $cm = get_coursemodule_from_instance('assignment', $this->assignmentid, $this->courseid);
-        $cm->section;
-        error_log('document_save_file $cm->section: '.$cm->section);
-        $resourcemodules = get_coursemodules_in_course('resource', $this->courseid);
-        $resourcemodule;
-        $fileinfo = array('component'=>'mod_resource',
-                          'filearea'=>'content',
-                          'itemid'=>0,
+        
+        
+        $context = get_context_instance(CONTEXT_USER, $docowner);
+        $draftfileinfo = array('contextid'=>$context->id,
+                          'component'=>'user',
+                          'filearea'=>'draft',
+                          'itemid'=>$this->assignmentid,
                           'filepath'=>'/',
                           'filename'=>$docname,
                           'userid'=>$docowner,
-                          'sortorder'=>1);
+                          'sortorder'=>0);
+        // create file in draft area
+        $draftfile = $fs->get_file($draftfileinfo['contextid'], 
+                              $draftfileinfo['component'], 
+                              $draftfileinfo['filearea'],         
+                              $draftfileinfo['itemid'], 
+                              $draftfileinfo['filepath'], 
+                              $draftfileinfo['filename']);
+        if ($draftfile){
+          $draftfile->delete();	
+        }
+        $fs->create_file_from_string($draftfileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
+        
+        // Find the resource for this file
+        $cm = get_coursemodule_from_instance('assignment', $this->assignmentid, $this->courseid);
+        $resourcemodules = get_coursemodules_in_course('resource', $this->courseid);        
+        $resource = new object();
+                
         foreach ($resourcemodules as $rm){
             if ($rm->section == $cm->section){
-            	// get context id
-            	$context = get_context_instance(CONTEXT_MODULE, $resourcemodule->id);
-            	$fileinfo['contextid']= $context->id;                                  
-            	$file = $fs->get_file($fileinfo->contextid, 
-                              $fileinfo->component, 
-                              $fileinfo->filearea,         
-                              $fileinfo->itemid, 
-                              $fileinfo->filepath, 
-                              $fileinfo->filename);            	
-            	if ($file){
-            	    error_log('document_save_file $file: '.print_r($file, TRUE));
+            	// check if resource already exists for this file
+            	$resource = $DB->get_record('resource', array('id'=>$rm->instance,'name'=>$docname));          	
+            	if ($resource){
+            		$resource->coursemodule = $rm->id;
+            	    error_log('document_save_file found resource: '.print_r($resource, TRUE));
             	    break;
             	}           	 
             }	
         }
 
-        if ($file){
-        	$file->delete();
+        if ($resource->id){
+        	// move file from draft to content
+        	$resource->files = $draftfileinfo['itemid'];
+        	$resource->instance = $resource->id;
+        	resource_update_instance($resource, null);
         } else {
         	// create the rubric resource, course module and context
         	// should all be done within a database transaction
@@ -177,9 +192,9 @@ class LW_document {
         	$rcm->availableuntil = 0;
         	$rcm->showavailability = false;
         	$rcmid = add_course_module($rcm);
+        	add_mod_to_section($rcm);
         	error_log('document_save_file $rcmid: '.$rcmid);
         	
-        	$resource = new object();
         	$resource->coursemodule = $rcmid;
         	$resource->course = clean_param($this->courseid, PARAM_INT);
         	$resource->name = $docname;
@@ -188,16 +203,16 @@ class LW_document {
         	$resource->legacyfiles = 0;
         	$resource->display = 0;
         	$resource->filterfiles = 0;
-        	$resource->revision = 1;        	
+        	$resource->revision = 1;
+        	$resource->files = $draftfileinfo['itemid'];       	
         	$resourceid = resource_add_instance($resource, null);
         	error_log('document_save_file $resourceid: '.$resourceid);
         	
-        	// creates context
+        	// creates context if it doesn't exist
         	$context = get_context_instance(CONTEXT_MODULE, $rcmid);
-        	$fileinfo['contextid']= $context->id;
         }        
+        rebuild_course_cache($this->courseid);
         
-        $fs->create_file_from_string($fileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
         
         // TODO throw exception and log error if file cannot be saved
         //$this->error->add_error('Document', '0', 'dircannotbecreated');
