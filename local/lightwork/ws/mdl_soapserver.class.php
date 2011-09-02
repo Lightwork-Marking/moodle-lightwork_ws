@@ -466,12 +466,27 @@ class mdl_soapserver extends server {
         // If only 1 value of filename is sent by client, $filenames is simple array of string
         // If more then 1 values are sent by client, $filenames is hash where $filenames['filename'] contains the values
         if (is_array($filenames['filename'])) {
-            $names = $filenames['filename'];
+            $names = array_unique($filenames['filename']);
         } else {
             $names = $filenames;
         }
+        $cm = get_coursemodule_from_instance('assignment', $assignment, $course);
+        $resourcemodules = get_coursemodules_in_course('resource', $course);
+        $context = new object();
+        
+        foreach ($resourcemodules as $rm){
+            if ($rm->section == $cm->section){
+            	$context = get_context_instance(CONTEXT_MODULE, $rm->id);
+                break;
+            }
+        }
+        
+        if (!isset($context->id)){
+            return new soap_fault('Client', '', 'no resource module context id');	
+        }
+        
         foreach ($names as $filename) {
-            $file = $doc->get_assignment_file($filename);
+            $file = $doc->get_assignment_file($filename, $context->id);
             if (!isset($file['error'])) {
                 $NUSOAP_SERVER->addAttachment($file['data'], $file['filename'], 'application/octet-stream', $file['fileref']);
                 unset($file['data']);

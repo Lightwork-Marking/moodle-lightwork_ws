@@ -122,19 +122,24 @@ class LW_document {
     	
     	$USER->id = $docowner;
         $fs = get_file_storage();
-        error_log('document_save_file $docname: '.$docname);
+                
+        $path_parts = pathinfo($docname);
+        if ($path_parts['dirname']==='.'){
+          $path_parts['dirname']='/';	
+        }
         
+        error_log('document_save_file basename: '.$path_parts['basename']);
+        error_log('document_save_file dirname: '.$path_parts['dirname']);
         
         $context = get_context_instance(CONTEXT_USER, $docowner);
         $draftfileinfo = array('contextid'=>$context->id,
                           'component'=>'user',
                           'filearea'=>'draft',
                           'itemid'=>$this->assignmentid,
-                          'filepath'=>'/',
-                          'filename'=>$docname,
+                          'filepath'=>$path_parts['dirname'],
+                          'filename'=>$path_parts['basename'],
                           'userid'=>$docowner,
                           'sortorder'=>0);
-        // create file in draft area
         $draftfile = $fs->get_file($draftfileinfo['contextid'], 
                               $draftfileinfo['component'], 
                               $draftfileinfo['filearea'],         
@@ -142,10 +147,17 @@ class LW_document {
                               $draftfileinfo['filepath'], 
                               $draftfileinfo['filename']);
         if ($draftfile){
-          $draftfile->delete();	
+            try {
+                $draftfile->delete();
+            } catch (dml_exception $dex){
+                error_log('document_save_file dml_exception: '.$dex->getMessage());	
+            }	
         }
-        $fs->create_file_from_string($draftfileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
-        
+        try {
+            $fs->create_file_from_string($draftfileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
+        } catch (file_exception $fex){
+            error_log('document_save_file file_exception: '.$fex->getMessage());	
+        }
         // Find the resource for this file
         $cm = get_coursemodule_from_instance('assignment', $this->assignmentid, $this->courseid);
         $resourcemodules = get_coursemodules_in_course('resource', $this->courseid);        
@@ -154,7 +166,11 @@ class LW_document {
         foreach ($resourcemodules as $rm){
             if ($rm->section == $cm->section){
             	// check if resource already exists for this file
-            	$resource = $DB->get_record('resource', array('id'=>$rm->instance,'name'=>$docname));          	
+            	try {
+            	    $resource = $DB->get_record('resource', array('id'=>$rm->instance,'name'=>$path_parts['basename']));
+            	} catch (dml_exception $dex){
+            	    error_log('document_save_file dml_exception: '.$dex->getMessage());	
+            	}          	
             	if ($resource){
             		$resource->coursemodule = $rm->id;
             	    error_log('document_save_file found resource: '.print_r($resource, TRUE));
@@ -176,7 +192,7 @@ class LW_document {
         	$rcm = new object();
         	$rcm->course = clean_param($this->courseid, PARAM_INT);
         	$rcm->module = 14; // resource module
-        	$rcm->instance = 0; // value set when resource is created
+        	$rcm->instance = 0;
         	$rcm->section = $cm->section;
         	$rcm->score = 0;
         	$rcm->indent = 0;
@@ -221,57 +237,64 @@ class LW_document {
     }
 
     /**
-     * Get the metadata information for all files belong to an assignment.
+     * Get the metadata information for all file resources belonging to an assignment.
      * This will include the annotated files by marker to be synchronized to marking manager.
      *
      * @return array assignment files metadata
      */
     function document_metadata_download($includeannotatedfiles = true) {
-        $rdocuments = array();
-        if (!is_dir($this->absolute_path)) {
-            $this->error->add_error('Document', '0', 'foldernotavailable');
-            return $rdocuments;
+        $rdocuments = array();        
+        $cm = get_coursemodule_from_instance('assignment', $this->assignmentid, $this->courseid);
+        $resourcemodules = get_coursemodules_in_course('resource', $this->courseid);        
+        $fs = get_file_storage();                
+        foreach ($resourcemodules as $rm){
+            if ($rm->section == $cm->section){
+            	$context = get_context_instance(CONTEXT_MODULE, $rm->id);
+                $files = $fs->get_area_files($context->id, 'mod_resource', 'content', 0, "sortorder", false);
+                foreach ($files as $file) {
+                	if (!$includeannotatedfiles && (strpos($file->get_filepath(), '/'.ANNOTATED)===0)){
+                		continue;
+                	}
+                	$relative_file_path = ltrim($file->get_filepath().$file->get_filename(),'/');
+                	$rdocuments['metadata'][] = array('metadatainformation' => $relative_file_path,
+                                              'modificationtime'    => $file->get_timemodified());
+                }   	 
+            }	
         }
-
-        $filelist = array();
-        $filelist = $this->rscandir($this->absolute_path, $filelist, 0, $includeannotatedfiles);
-        $relativefiles = $this->strip_relative_base($filelist);
-
-        for ($i = 0; $i < count($filelist); $i++) {
-            $mtime = filemtime($filelist[$i]);
-            $rdocuments['metadata'][] = array('metadatainformation' => $relativefiles[$i],
-                                              'modificationtime'    => $mtime);
-        }
+        error_log('document_metadata_download $rdocuments: '.print_r($rdocuments, TRUE));
         return $rdocuments;
     }
 
-    function get_assignment_file($filename) {
-        $canonical_filename = $this->absolute_path.'/'.$filename;
-
+    function get_assignment_file($filename, $contextid) {
+    	
+    	$fs = get_file_storage();
+    	
+    	$path_parts = pathinfo($filename);
+        if ($path_parts['dirname']==='.'){
+          $path_parts['dirname']='/';	
+        }
+        
+        $file = $fs->get_file($contextid,'mod_resource','content',0,$path_parts['dirname'],$path_parts['basename']);
+                              
         $result = array();
-
-        if ($fh = fopen($canonical_filename, 'rb')) {
-            $filesize = filesize($canonical_filename);
-            if ($filesize > 0) {
-                $data = fread($fh, $filesize);
-                fclose($fh);
-
-                $result['data'] = $data;
-            } else {
-                $result['data'] = '';
-            }
-            $result['filename'] = $filename;
-            $result['filesize'] = $filesize;
-            $result['timemodified'] = filemtime($canonical_filename);
-            $result['fileref'] = LW_Common::CID . preg_replace('/\s/', '_', $filename);
+                              
+        if ($file){
+        	$result['data'] = $file->get_content();       	
+        	$result['filename'] = $filename;
+            $result['filesize'] = $file->get_filesize();
+            $result['timemodified'] = $file->get_timemodified();
+            //$result['fileref'] = LW_Common::CID . preg_replace('/\s/', '_', $filename);
+            $result['fileref'] = LW_Common::CID . $filename;
         } else {
-            $result['error'] = array(
+        	$result['error'] = array(
                                    'element'     => 'Document',
                                    'id'          => 0,
                                    'errorcode'   => 'cannotopenfile',
                                    'errormessage'=> $filename
                                );
+        	
         }
+    	error_log('get_assignment_file $result: '.print_r($result, TRUE));
         return $result;
     }
 }
