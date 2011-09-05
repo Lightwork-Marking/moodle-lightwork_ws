@@ -112,7 +112,6 @@ class LW_document {
      * Saves a file as a resource for the assignment
      * @param binary $data
      * @param string $docname
-     * TODO catch and throw failure exceptions
      */
     function document_save_file($data, $docname, $docowner) {
     	global $DB, $CFG, $USER;
@@ -127,9 +126,6 @@ class LW_document {
         if ($path_parts['dirname']==='.'){
           $path_parts['dirname']='/';	
         }
-        
-        error_log('document_save_file basename: '.$path_parts['basename']);
-        error_log('document_save_file dirname: '.$path_parts['dirname']);
         
         $context = get_context_instance(CONTEXT_USER, $docowner);
         $draftfileinfo = array('contextid'=>$context->id,
@@ -162,6 +158,7 @@ class LW_document {
         $cm = get_coursemodule_from_instance('assignment', $this->assignmentid, $this->courseid);
         $resourcemodules = get_coursemodules_in_course('resource', $this->courseid);        
         $resource = new object();
+        $rcm = new object();
                 
         foreach ($resourcemodules as $rm){
             if ($rm->section == $cm->section){
@@ -173,6 +170,7 @@ class LW_document {
             	}          	
             	if ($resource){
             		$resource->coursemodule = $rm->id;
+            		$rcm = $rm;
             	    error_log('document_save_file found resource: '.print_r($resource, TRUE));
             	    break;
             	}           	 
@@ -183,13 +181,18 @@ class LW_document {
         	// move file from draft to content
         	$resource->files = $draftfileinfo['itemid'];
         	$resource->instance = $resource->id;
+        	$csection = $DB->get_record('course_sections', array('id'=>$cm->section));
+        	$modarray = explode(",", $csection->sequence);
+        	if (!in_array($rcm->id, $modarray)){
+        	  $this->add_resource_module_to_section($rcm);	
+        	}        	
         	resource_update_instance($resource, null);
         } else {
         	// create the rubric resource, course module and context
         	// should all be done within a database transaction
         	require_once("$CFG->dirroot/course/lib.php");
         	require_once("$CFG->dirroot/mod/resource/locallib.php");
-        	$rcm = new object();
+        	
         	$rcm->course = clean_param($this->courseid, PARAM_INT);
         	$rcm->module = 14; // resource module
         	$rcm->instance = 0;
@@ -208,7 +211,8 @@ class LW_document {
         	$rcm->availableuntil = 0;
         	$rcm->showavailability = false;
         	$rcmid = add_course_module($rcm);
-        	add_mod_to_section($rcm);
+        	$rcm->id = $rcmid;
+        	$this->add_resource_module_to_section($rcm);
         	error_log('document_save_file $rcmid: '.$rcmid);
         	
         	$resource->coursemodule = $rcmid;
@@ -296,6 +300,47 @@ class LW_document {
         }
     	error_log('get_assignment_file $result: '.print_r($result, TRUE));
         return $result;
+    }
+    
+    /**
+     * This is an alternative to add_mod_to_section in course/lib.php which has a defect
+     * TODO report to Moodle error shown below 
+     * $DB->get_record("course_sections", array("course"=>$mod->course, "section"=>$mod->section)))
+     * Enter description here ...
+     * @param unknown_type $mod
+     * @param unknown_type $beforemod
+     */
+    private function add_resource_module_to_section($mod, $beforemod=NULL) {
+        global $DB;
+        if ($section = $DB->get_record("course_sections", array("id"=>$mod->section))) {
+
+            $section->sequence = trim($section->sequence);
+        
+            if (empty($section->sequence)) {
+                $newsequence = "$mod->id";
+
+            } else if ($beforemod) {
+                $modarray = explode(",", $section->sequence);
+
+                if ($key = array_keys($modarray, $beforemod->id)) {
+                    $insertarray = array($mod->id, $beforemod->id);
+                    array_splice($modarray, $key[0], 1, $insertarray);
+                    $newsequence = implode(",", $modarray);
+
+                } else {  // Just tack it on the end anyway
+                    $newsequence = "$section->sequence,$mod->coursemodule";
+                }
+
+            } else {
+                $newsequence = "$section->sequence,$mod->id";
+            }
+
+            $DB->set_field("course_sections", "sequence", $newsequence, array("id"=>$section->id));
+            return $section->id;     // Return course_sections ID that was used.
+
+        } else {
+            // TODO throw exception
+        }
     }
 }
 ?>
