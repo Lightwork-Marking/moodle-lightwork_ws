@@ -28,6 +28,7 @@ class LW_Common {
     const WORD_2007_EXT = 'docx';
     const PPT_2007_EXT = 'pptx';
     const EXCEL_2007_EXT = 'xlsx';
+    const MOD_RESOURCE = 14;
     
     function sanitise_for_msoffice2007($filename, $data){
         $extension = pathinfo($filename, PATHINFO_EXTENSION);

@@ -399,24 +399,20 @@ class mdl_soapserver extends server {
 
         require_once($CFG->libdir.'/filelib.php');
 
-        $rsubmissions = array();
-
         //  Validate the session
         if (!$this->validate_session($sesskey)) {
             return $this->fault;
         }
 
+        $rsubmissions = array();
+        
         //check that the user is authorised to get the submission files
         $assignment = $DB->get_record("assignment", array('id'=>$assignmentid));
-        if (!$this -> is_lightworkuser_by_assignment($assignment, $this->session->userid)) {
+        if (!$this->is_lightworkuser_by_assignment($assignment, $this->session->userid)) {
             return new soap_fault('Client', '', self::UNAUTHORISED_MESSAGE);
         }
-        $marker;
-        if ($assignment->assignmenttype == 'team'){
-            $marker = new LW_Marker($this->session->userid, LW_Common::TEAM_MARKING);   
-        } else {
-            $marker = new LW_Marker($this->session->userid, LW_Common::STUDENT_MARKING); 
-        }
+        $marker = create_marker($assignment->assignmentttype);
+        
         $rsubmissions = $marker->assignment_submission_files($assignmentid, $ids['submissionid']);
         $rsubmissions['errors'] = $marker->error->get_errors();
 
@@ -426,6 +422,14 @@ class mdl_soapserver extends server {
             }
         }
         return $rsubmissions;
+    }
+    
+    private function create_marker($assignmenttype) {
+        $type = LW_Common::STUDENT_MARKING;
+        if ($assignmenttype == 'team') {
+            $type = LW_Common::TEAM_MARKING;   
+        }
+        return new LW_Marker($this->session->userid, $type);
     }
 
     private function zip_submission_file($submissionfile) {

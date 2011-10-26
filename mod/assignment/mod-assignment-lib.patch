@@ -1,8 +1,7 @@
     function view_intro() {
-        print_simple_box_start('center', '', '', 0, 'generalbox', 'intro');
-        $formatoptions = new stdClass;
-        $formatoptions->noclean = true;
-        echo format_text($this->assignment->description, $this->assignment->format, $formatoptions);
+        global $OUTPUT;
+        echo $OUTPUT->box_start('generalbox boxaligncenter', 'intro');
+        echo format_module_intro('assignment', $this->assignment, $this->cm->id);
         // LIGHTWORK PATCH STARTS
         // displays a link to the rubric PDF for this assignment if there is one
         global $CFG;
@@ -10,7 +9,8 @@
         $activitydocs = new LW_document($this->cm->course, $this->assignment->id);
         echo $activitydocs->document_links();
         // LIGHTWORK PATCH ENDS
-        print_simple_box_end();
+        echo $OUTPUT->box_end();
+        plagiarism_print_disclosure($this->cm->id);
     }
 
     
@@ -73,22 +73,26 @@
         require_once($CFG->dirroot.'/local/lightwork/lib/lw_document.php');
         fulldelete($CFG->dataroot.'/'.$assignment->course.'/'.LW_document::LW_FOLDER_NAME.'/assignment/'.$assignment->id);
         // LIGHTWORK PATCH ENDS
-
-        if (! $DB->delete_records('assignment_submissions', array('assignment'=>$assignment->id))) {
-            $result = false;
+        
+        // now get rid of all files
+        $fs = get_file_storage();
+        if ($cm = get_coursemodule_from_instance('assignment', $assignment->id)) {
+            $context = get_context_instance(CONTEXT_MODULE, $cm->id);
+            $fs->delete_area_files($context->id);
         }
 
-        if (! $DB->delete_records('assignment', array('id'=>$assignment->id))) {
+        if (! $DB->delete_records('assignment_submissions', array('assignment'=>$assignment->id))) {
             $result = false;
         }
 
         if (! $DB->delete_records('event', array('modulename'=>'assignment', 'instance'=>$assignment->id))) {
             $result = false;
         }
-        
-        // delete file area with all attachments - ignore errors
-        require_once($CFG->libdir.'/filelib.php');
-        fulldelete($CFG->dataroot.'/'.$assignment->course.'/'.$CFG->moddata.'/assignment/'.$assignment->id);
+
+        if (! $DB->delete_records('assignment', array('id'=>$assignment->id))) {
+            $result = false;
+        }
+        $mod = $DB->get_field('modules','id',array('name'=>'assignment'));
 
         assignment_grade_item_delete($assignment);
 

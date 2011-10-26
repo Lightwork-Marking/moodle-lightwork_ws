@@ -10,9 +10,7 @@ We fixed this issue by setting its $lifetime = 0 in /moodle/file.php.
     // ========================================
     // finally send the file
     // ========================================
-    session_write_close(); // unlock session during fileserving
-    $filename = $args[count($args)-1];
-    
+    session_get_instance()->write_close(); // unlock session during fileserving
     //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     //Lightwork patch start
     require_once($CFG->dirroot.'/local/lightwork/lib/lw_document.php');
@@ -23,5 +21,4 @@ We fixed this issue by setting its $lifetime = 0 in /moodle/file.php.
     }
     //Lightwork patch end    
     //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    
-    send_file($pathname, $filename, $lifetime, $CFG->filteruploadedfiles, false, $forcedownload);
+    send_stored_file($file, $lifetime, $CFG->filteruploadedfiles, $forcedownload);

@@ -17,6 +17,7 @@ if (!defined('MOODLE_INTERNAL')) {
 
 require_once('lw_common.php');
 
+
 function marking_selection_sql($marking, $assignment) {
     return "marker = {$marking->marker} ".
            "AND student = {$marking->student} ".
@@ -46,7 +47,21 @@ function get_student_participant_sql($userid, $contextid) {
            "WHERE u.id = {$userid} ".
            "AND ra.contextid = {$contextid} ".
            "AND ra.roleid = {$studentrole}";
-    
+}
+
+function get_assignment_resource_id($courseid, $assignmentid) {
+    return "SELECT cm.id ".
+            "FROM {course_modules} cm, {modules} md, {resource} m ".
+            "WHERE cm.course = {$courseid} ". 
+            "AND cm.instance = m.id ". 
+            "AND md.name = 'resource' ". 
+            "AND md.id = cm.module ".
+            "AND cm.section = (".
+              "SELECT cm.section ".
+              "FROM {course_modules} cm ".
+              "JOIN {modules} md ON md.id = cm.module ".
+              "JOIN mdl_assignment m ON m.id = cm.instance ".
+              "WHERE m.id = " . $assignmentid . " AND md.name = 'assignment')";
 }
 
 ?>

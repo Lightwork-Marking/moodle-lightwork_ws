@@ -10,57 +10,15 @@
  * @license http://www.gnu.org/copleft/gpl.html GNU Public License
  */
 
+if (!defined('MOODLE_INTERNAL')) {
+ die('Direct access to this script is forbidden.');
+}
+
 global $CFG;
 require_once('../../../config.php');
 require_once($CFG->dirroot . '/local/lightwork/lib/lw_document.php');
 
 class testlw_document extends UnitTestCase  {
-
-    function test_relative_path_default() {
-        $doc = new LW_document();
-        $this->assertEqual($doc->relative_path(), '0/lightwork_documents/assignment/0');
-    }
-
-    function test_relative_path_with_param() {
-        $doc = new LW_document(98765, 99999);
-        $this->assertEqual($doc->relative_path(), '98765/lightwork_documents/assignment/99999');
-    }
-
-    function test_rscandir_single_file() {
-        global $CFG;
-        $doc = new LW_document(98765, 99999);
-        $this->assertEqual(1, count($doc->rscandir($CFG->dataroot.'/'.$doc->relative_path())));
-    }
-
-    function test_rscandir_multiple_files() {
-        global $CFG;
-        $doc = new LW_document(98765, 88888);
-        $this->assertEqual(3, count($doc->rscandir($CFG->dataroot.'/'.$doc->relative_path())));
-    }
-
-    function test_rscandir_nested_multiple_files() {
-        global $CFG;
-        $doc = new LW_document(98765, 77777);
-        $this->assertEqual(3, count($doc->rscandir($CFG->dataroot.'/'.$doc->relative_path())));
-    }
-
-    function test_rscandir_annotated_with_single_file() {
-        global $CFG;
-        $doc = new LW_document(98765, 11111);
-        $this->assertEqual(1, count($doc->rscandir($CFG->dataroot.'/'.$doc->relative_path())));
-    }
-
-    function test_rscandir_annotated_with_multiple_files() {
-        global $CFG;
-        $doc = new LW_document(98765, 22222);
-        $this->assertEqual(3, count($doc->rscandir($CFG->dataroot.'/'.$doc->relative_path())));
-    }
-
-    function test_rscandir_annotated_with_nested_multiple_files() {
-        global $CFG;
-        $doc = new LW_document(98765, 33333);
-        $this->assertEqual(5, count($doc->rscandir($CFG->dataroot.'/'.$doc->relative_path())));
-    }
 
     function test_document_links_without_file() {
         $doc = new LW_document();
@@ -68,58 +26,45 @@ class testlw_document extends UnitTestCase  {
     }
 
     function test_document_links_with_single_file() {
-        $doc = new LW_document(98765, 99999);
-        $this->assertPattern('/test.txt/', $doc->document_links());
+        $doc = new LW_document(9, 22);
+        $result = $doc->document_links();
+        $this->assertPattern('/homework.xml/', $result);
     }
 
     function test_document_links_with_multiple_files() {
-        $doc = new LW_document(98765, 88888);
+        $doc = new LW_document(9, 23);
         $result = $doc->document_links();
-        $has_test1 = preg_match('/test1\.txt/', $result);
-        $has_test2 = preg_match('/test2\.doc/', $result);
-        $has_test3 = preg_match('/test3\.pdf/', $result);
-        $this->assertEqual($has_test1 . $has_test2 . $has_test3, '111');
+        $this->assertPattern('/sorter.js/', $result);
+        $this->assertPattern('/svn_log.txt/', $result);
     }
 
-    function test_document_links_with_nested_files() {
-        $doc = new LW_document(98765, 77777);
+    function test_document_links_with_nested_file() {
+        $doc = new LW_document(9, 25);
         $result = $doc->document_links();
-        $has_test1 = preg_match('/test1\.txt/', $result);
-        $has_test2 = preg_match('/12345\/test2\.doc/', $result);
-        $has_test3 = preg_match('/67890\/test3\.pdf/', $result);
-        $this->assertEqual($has_test1 . $has_test2 . $has_test3, '111');
+        $this->assertPattern('/rubric\/nested.sql/', $result);
+        $this->assertPattern('/misc\/nested-sorter.js/', $result);
     }
 
     function test_dopcument_links_with_annotated_dir_and_single_file() {
-        $doc = new LW_document(98765, 11111);
+        $doc = new LW_document(9, 24);
         $result = $doc->document_links();
-        $has_txt = preg_match('/one\.txt/', $result);
+        
+        $this->assertPattern('/misc\/reg_nested.txt/', $result);
+        
         $has_annotated = preg_match('/annotated/', $result);
-        $this->assertEqual($has_txt . $has_annotated, '10');
-    }
-
-    function test_document_links_with_annotated_dir_and_multiple_files() {
-        $doc = new LW_document(98765, 22222);
-        $result = $doc->document_links();
-        $has_txt = preg_match('/two\.txt/', $result);
-        $has_pdf = preg_match('/duo\.pdf/', $result);
-        $has_doc = preg_match('/deux\.doc/', $result);
-        $no_annotated = preg_match('/annotated/', $result);
-
-        $this->assertEqual($has_txt . $has_pdf . $has_doc . $no_annotated, '1110');
+        $this->assertEqual($has_annotated, 0);
     }
 
     function test_document_links_with_annotated_dir_and_multiple_nested_files() {
-        $doc = new LW_document(98765, 33333);
+        $doc = new LW_document(9, 26);
         $result = $doc->document_links();
-        $has_txt = preg_match('/three\.txt/', $result);
-        $has_pdf = preg_match('/pdf\/tri\.pdf/', $result);
-        $has_build_xml = preg_match('/misc\/build\.xml/', $result);
-        $has_main_java = preg_match('/misc\/src\/main\.java/', $result);
-        $has_test_java = preg_match('/misc\/src\/test\.java/', $result);
-        $no_annotated = preg_match('/annotated/', $result);
-
-        $this->assertEqual($has_txt.$has_pdf.$has_build_xml.$has_main_java.$has_test_java.$no_annotated, '111110');
+        
+        $this->assertPattern('/top1\/nested1-1\/first.txt/', $result);
+        $this->assertPattern('/top1\/nested1-2\/second.txt/', $result);
+        $this->assertPattern('/top2\/nested\/third.txt/', $result);
+        
+        $has_annotated = preg_match('/annotated/', $result);
+        $this->assertEqual($has_annotated, 0);
     }
 
     function test_document_metadata_download_no_file() {
@@ -133,113 +78,95 @@ class testlw_document extends UnitTestCase  {
 
         $this->assertNotNull($error);
         $this->assertIsA($error, 'array');
-        $this->assertEqual(count($error), 1);
+        $this->assertEqual(count($error), 0);
     }
 
     function test_document_metadata_download_single_file() {
-        $doc = new LW_document(98765, 99999);
+        $doc = new LW_document(9, 22);
         $result = $doc->document_metadata_download();
 
         $this->assertNotNull($result['metadata']);
-        $this->assertEqual(count($result['metadata']), 1);
+        
+        $metas = $result['metadata'];
+        $this->assertEqual(count($metas), 1);
+        
+        forEach($metas as $metadata) {
+            $this->assertPattern('/homework.xml/', $metadata['metadatainformation']);
+        }
     }
 
     function test_document_metadata_download_multiple_files() {
-        $doc = new LW_document(98765, 88888);
+        $doc = new LW_document(9, 23);
         $result = $doc->document_metadata_download();
 
         $this->assertNotNull($result['metadata']);
-        $this->assertEqual(count($result['metadata']), 3);
+        $metas = $result['metadata'];
+        $this->assertEqual(count($metas), 2);
+        
+        $this->assertPattern('/sorter.js/', $metas[0]['metadatainformation']);
+        $this->assertPattern('/svn_log.txt/', $metas[1]['metadatainformation']);
     }
 
     function test_document_metadata_download_nested_multiple_files() {
-        $doc = new LW_document(98765, 77777);
+        $doc = new LW_document(9, 25);
         $result = $doc->document_metadata_download();
 
         $this->assertNotNull($result['metadata']);
-        $this->assertEqual(count($result['metadata']), 3);
+        $metas = $result['metadata'];
+        $this->assertEqual(count($metas), 2);
+        
+        $this->assertPattern('/rubric\/nested.sql/', $metas[0]['metadatainformation']);
+        //debugging('metas[0]: ' . print_r($metas[0], true));
+        $this->assertPattern('/misc\/nested-sorter.js/', $metas[1]['metadatainformation']);
+        //debugging('metas[1]: ' . print_r($metas[1], true));
     }
 
     function test_document_metadata_download_annotated_single_file() {
-        $doc = new LW_document(98765, 11111);
+        $doc = new LW_document(9, 24);
         $result = $doc->document_metadata_download();
 
         $this->assertNotNull($result['metadata']);
-        $this->assertEqual(count($result['metadata']), 2);
+        $metas = $result['metadata'];
+        $this->assertEqual(count($metas), 2);
+        
+        $this->assertPattern('/annotated\/nested.sql/', $metas[0]['metadatainformation']);
+        $this->assertPattern('/misc\/reg_nested.txt/', $metas[1]['metadatainformation']);
     }
-
-    function test_document_metadata_download_annotated_multiple_files() {
-        $doc = new LW_document(98765, 22222);
-        $result = $doc->document_metadata_download();
-
-
-        $this->assertNotNull($result['metadata']);
-        $this->assertEqual(count($result['metadata']), 6);
-    }
-
-    function test_document_metadata_download_annotated_nestsed_multiple_files() {
-        $doc = new LW_document(98765, 33333);
+    
+    function test_document_metadata_download_nested_multiple_files_with_annotated_file() {
+        $doc = new LW_document(9, 26);
         $result = $doc->document_metadata_download();
 
         $this->assertNotNull($result['metadata']);
-        $this->assertEqual(count($result['metadata']), 10);
+        $metas = $result['metadata'];
+        $this->assertEqual(count($metas), 4);
+        
+        $this->assertPattern('/top1\/nested1-1\/first.txt/', $metas[0]['metadatainformation']);
+        $this->assertPattern('/top1\/nested1-2\/second.txt/', $metas[1]['metadatainformation']);
+        $this->assertPattern('/annotated\/nested\/anno_file.txt/', $metas[2]['metadatainformation']);
+        $this->assertPattern('/top2\/nested\/third.txt/', $metas[3]['metadatainformation']);
     }
-
+/*
     function test_document_save_file() {
-        $doc = new LW_document(98765, 55555);
+        $doc = new LW_document(9, 27);
 
-        global $CFG;
+        global $CFG, $DB;
 
-        $filename = $CFG->dataroot . '/' . $doc->relative_path() . '/saved_file.txt';
-        if (file_exists($filename)) trigger_error('File \'' . $filename . '\' already exist');
+        $filename = 'saved_file.txt';
 
-        $doc->document_save_file('dummy data content', 'saved_file.txt');
+        $doc->document_save_file('dummy data content', 'saved_file.txt', 201);
 
-        $this->assertTrue(file_exists($filename));
-        $this->assertEqual(filesize($filename), 18);
-
-        @unlink($filename);
+        $result = $DB->get_record("files", array("filename" => "saved_file.txt", "component" => "mod_resource"), '*', IGNORE_MULTIPLE);
+        debugging('result: ' . print_r($result, true));
+        $this->assertNotNull($result);
+        $this->assertEqual($result->filename, 'saved_file.txt');
+        $this->assertEqual($result->filepath, '/');
+        $this->assertEqual($result->filesize, 18);
     }
-
-    function test_document_save_file_nested_file() {
-        $doc = new LW_document(98765, 55555);
-
-        global $CFG;
-
-        $filename = $CFG->dataroot . '/' . $doc->relative_path() . '/child/saved_file.txt';
-        if (file_exists($filename)) trigger_error('File \'' . $filename . '\' already exist');
-
-        $doc->document_save_file('dummy data content', 'child/saved_file.txt');
-
-        $this->assertTrue(file_exists($filename));
-        $this->assertEqual(filesize($filename), 18);
-
-        @unlink($filename);
-        @rmdir($CFG->dataroot . '/' . $doc->relative_path() . '/child');
-    }
-
-    function test_document_save_file_deep_nested_file() {
-        $doc = new LW_document(98765, 55555);
-
-        global $CFG;
-
-        $filename = $CFG->dataroot . '/' . $doc->relative_path() . '/child/grandchild/saved_file.txt';
-        if (file_exists($filename)) trigger_error('File \'' . $filename . '\' already exist');
-
-        $doc->document_save_file('dummy data content', 'child/grandchild/saved_file.txt');
-
-        $this->assertTrue(file_exists($filename));
-        $this->assertEqual(filesize($filename), 18);
-
-        @unlink($filename);
-        @rmdir($CFG->dataroot.'/'.$doc->relative_path().'/child/grandchild');
-        @rmdir($CFG->dataroot.'/'.$doc->relative_path().'/child');
-    }
-
+*/
     function test_get_assignment_file_no_file() {
         $doc = new LW_document();
 
-        $this->expectError();
         $result = $doc->get_assignment_file('dummy.cs');
         $this->assertNotNull($result);
         $this->assertNotNull($result['error']);
@@ -250,93 +177,14 @@ class testlw_document extends UnitTestCase  {
     }
 
     function test_get_assignment_file_standard_file() {
-        $doc = new LW_document(98765, 99999);
+        $doc = new LW_document(9, 25);
 
-        $result = $doc->get_assignment_file('test.txt');
+        $result = $doc->get_assignment_file('/misc/nested-sorter.js', 121);
+        debugging('result: ' . print_r($result, true));
         $this->assertNotNull($result);
-        $this->assertEqual($result['filename'], 'test.txt');
+        $this->assertEqual($result['filename'], '/misc/nested-sorter.js');
         $this->assertEqual(strlen($result['data']), $result['filesize']);
     }
-
-    function test_get_assignment_file_nested_file() {
-        $doc = new LW_document(98765, 11111);
-
-        $result = $doc->get_assignment_file('annotated/annotated_one.txt');
-        $this->assertNotNull($result);
-        $this->assertEqual($result['filename'], 'annotated/annotated_one.txt');
-        $this->assertEqual(strlen($result['data']), $result['filesize']);
-    }
-    
-    function setUp() {
-        global $CFG;
-        foreach (testlw_document::$TEST_DIRS as $dir) {
-            @mkdir($CFG->dataroot . '/' . $dir);
-        }
-        foreach (testlw_document::$TEST_FILES as $file) {
-            @touch($CFG->dataroot . '/' . $file);
-        }
-    }
-
-    function tearDown() {
-        global $CFG;
-        foreach (testlw_document::$TEST_FILES as $file) {
-            @unlink($CFG->dataroot . '/' . $file);
-        }
-        foreach (@array_reverse(testlw_document::$TEST_DIRS) as $dir) {
-            @rmdir($CFG->dataroot . '/' . $dir);
-        }
-    }
-
-    private static $TEST_DIRS = array (
-        "98765",
-        "98765/lightwork_documents",
-        "98765/lightwork_documents/assignment",
-        "98765/lightwork_documents/assignment/99999",
-        "98765/lightwork_documents/assignment/88888",
-        "98765/lightwork_documents/assignment/77777",
-        "98765/lightwork_documents/assignment/77777/12345",
-        "98765/lightwork_documents/assignment/77777/67890",
-        "98765/lightwork_documents/assignment/11111",
-        "98765/lightwork_documents/assignment/11111/annotated",
-        "98765/lightwork_documents/assignment/22222",
-        "98765/lightwork_documents/assignment/22222/annotated",
-        "98765/lightwork_documents/assignment/33333",
-        "98765/lightwork_documents/assignment/33333/pdf",
-        "98765/lightwork_documents/assignment/33333/misc",
-        "98765/lightwork_documents/assignment/33333/misc/src",
-        "98765/lightwork_documents/assignment/33333/annotated",
-        "98765/lightwork_documents/assignment/33333/annotated/pdf",
-        "98765/lightwork_documents/assignment/33333/annotated/misc",
-        "98765/lightwork_documents/assignment/33333/annotated/misc/src",
-        "98765/lightwork_documents/assignment/55555",
-    );
-
-    private static $TEST_FILES = array(
-        "98765/lightwork_documents/assignment/99999/test.txt",
-        "98765/lightwork_documents/assignment/88888/test1.txt",
-        "98765/lightwork_documents/assignment/88888/test2.doc",
-        "98765/lightwork_documents/assignment/88888/test3.pdf",
-        "98765/lightwork_documents/assignment/77777/test1.txt",
-        "98765/lightwork_documents/assignment/77777/12345/test2.doc",
-        "98765/lightwork_documents/assignment/77777/67890/test3.pdf",
-        "98765/lightwork_documents/assignment/11111/one.txt",
-        "98765/lightwork_documents/assignment/11111/annotated/annotated_one.txt",
-        "98765/lightwork_documents/assignment/22222/two.txt",
-        "98765/lightwork_documents/assignment/22222/duo.pdf",
-        "98765/lightwork_documents/assignment/22222/deux.doc",
-        "98765/lightwork_documents/assignment/22222/annotated/annotated_two.txt",
-        "98765/lightwork_documents/assignment/22222/annotated/annotated_duo.pdf",
-        "98765/lightwork_documents/assignment/22222/annotated/annotated_deux.doc",
-        "98765/lightwork_documents/assignment/33333/three.txt",
-        "98765/lightwork_documents/assignment/33333/pdf/tri.pdf",
-        "98765/lightwork_documents/assignment/33333/misc/build.xml",
-        "98765/lightwork_documents/assignment/33333/misc/src/main.java",
-        "98765/lightwork_documents/assignment/33333/misc/src/test.java",
-        "98765/lightwork_documents/assignment/33333/annotated/annotated_three.txt",
-        "98765/lightwork_documents/assignment/33333/annotated/pdf/annotated_tri.pdf",
-        "98765/lightwork_documents/assignment/33333/annotated/misc/annotated_build.xml",
-        "98765/lightwork_documents/assignment/33333/annotated/misc/src/annotated_main.java",
-        "98765/lightwork_documents/assignment/33333/annotated/misc/src/annotated_test.java",
-    );
+  
 }
 ?>
