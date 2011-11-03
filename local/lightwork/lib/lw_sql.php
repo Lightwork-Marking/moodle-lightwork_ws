@@ -64,4 +64,17 @@ function get_assignment_resource_id($courseid, $assignmentid) {
               "WHERE m.id = " . $assignmentid . " AND md.name = 'assignment')";
 }
 
+function find_file_contextid($courseid, $filepath, $filename) {
+    return "SELECT f.contextid ". 
+		   "FROM {files} f, {context} ctx, {course_modules} modl ".
+           "WHERE f.contextid = ctx.id ".
+           "AND ctx.instanceid = modl.id ".
+           "AND modl.course = {$courseid} ".
+           "AND modl.module = 14 ". // 14 is mod_resource
+           "AND f.component = 'mod_resource' ".
+           "AND f.filearea = 'content' ".
+           "AND f.filepath = '{$filepath}' ".
+           "AND f.filename = '{$filename}'";
+}
+
 ?>

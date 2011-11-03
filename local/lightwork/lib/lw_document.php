@@ -107,6 +107,9 @@ class LW_document {
         return $result;
     }
     
+    /*
+     * Traverse down the folder structure and collect all child fileinfo.
+     */
     private function collect_children_fileinfo($folder, &$result, $includeannotatedfiles = true) {
         $children = $folder->get_children();
         //debugging('children: '. print_r($children, true));
@@ -155,6 +158,9 @@ class LW_document {
         $this->update_resource($draftfileinfo, $docname, $path_parts);
     }
     
+    /*
+     * Update resource information of a particular file.
+     */
     private function update_resource($draftfileinfo, $docname, $path_parts) {
         global $CFG, $DB;
         
@@ -164,15 +170,15 @@ class LW_document {
         $resource = new object();
         $rcm = new object();
 
-        foreach ($resourcemodules as $rm){
-            if ($rm->section == $cm->section){
+        foreach ($resourcemodules as $rm) {
+            if ($rm->section == $cm->section) {
                 // check if resource already exists for this file
                 try {
                     $resource = $DB->get_record('resource', array('id'=>$rm->instance,'name'=>$path_parts['basename']));
-                } catch (dml_exception $dex){
+                } catch (dml_exception $dex) {
                     error_log('document_save_file dml_exception: '.$dex->getMessage());
                 }
-                if ($resource){
+                if ($resource) {
                     $resource->coursemodule = $rm->id;
                     $rcm = $rm;
                     error_log('document_save_file found resource: '.print_r($resource, TRUE));
@@ -274,7 +280,7 @@ class LW_document {
         if ($draftfile) {
             try {
                 $draftfile->delete();
-            } catch (dml_exception $dex){
+            } catch (dml_exception $dex) {
                 error_log('document_save_file dml_exception: '.$dex->getMessage());
             }
         }
@@ -285,7 +291,24 @@ class LW_document {
         }
     }
     
-    function get_assignment_file($filename, $contextid = 0) {
+    /**
+     * Get the resource file belong to an assignment based on the given filename.
+     * 
+     * @param string $filename
+     * 
+     * @return an associative array which contain the file and its metadata.
+     * The content of the associative array are based on the following keys:
+     * <ul>
+     *   <li>filename - name of the file including its path</li>
+     *   <li>filesize - the size of the file in byte</li>
+     *   <li>timemodified - time the file was last modified</li>
+     *   <li>fileref - file reference for XML SOAP attachment</li>
+     *   <li>data    - the content of the file</li>
+     *   <li>error   - error that might happened during getting the file</li>
+     * </ul>
+     * 
+     */
+    function get_assignment_file($filename) {
          
         $fs = get_file_storage();
          
@@ -296,8 +319,9 @@ class LW_document {
         if ($path_parts['dirname'][strlen($path_parts['dirname'])-1] !== '/') {
             $path_parts['dirname'] = $path_parts['dirname'] . '/';
         }
-
-        debugging('path_parts:' . var_dump($path_parts));
+        //debugging('path_parts: ' . var_export($path_parts, true));
+        $contextid = $this->get_file_contextid($path_parts['dirname'], $path_parts['basename']);
+        //debugging($filename . ' has contextid ' . $contextid);
         $file = $fs->get_file($contextid,'mod_resource','content',0,$path_parts['dirname'],$path_parts['basename']);
 
         $result = array();
@@ -320,6 +344,25 @@ class LW_document {
         }
         error_log('get_assignment_file $result: ' . print_r($result, TRUE));
         return $result;
+    }
+    
+    /*
+     * Function to get lightwork moodle file contextid based on given filepath
+     * and filename. 
+     */
+    function get_file_contextid($filepath, $filename) {
+        global $DB;
+        
+        $sql = find_file_contextid($this->courseid, $filepath, $filename);
+        $params = array();
+        $params['courseid'] = $this->courseid;
+        $params['filepath'] = $filepath;
+        $params['filename'] = $filename;
+        $result = $DB->get_record_sql($sql, $params);
+        // debugging('result: ' . print_r($result, true));
+        if ($result) {
+            return $result->contextid;
+        }
     }
 
     /**

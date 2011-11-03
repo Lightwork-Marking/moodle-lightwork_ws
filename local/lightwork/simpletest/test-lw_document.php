@@ -2,9 +2,9 @@
 /**
  * Unit tests for LW_Document.
  *
- * WARNING: This test case will create folder under <i>&lt;moodle_data&gt;</i> for testing purposes using
- * <b>98765</b> as the course id and <b>99999, 88888, 77777, 11111, 22222, and 33333</b> as assignment id.
- *
+ * WARNING: This test case is NOT portable. Due to change of Moodle 2.0 File API, it is hard to automatically 
+ * create test fixtures for this. So all the following test are based on manually setup data in local moodle instance.
+ * 
  * @author wirianto
  * @version $Revision$
  * @license http://www.gnu.org/copleft/gpl.html GNU Public License
@@ -179,12 +179,34 @@ class testlw_document extends UnitTestCase  {
     function test_get_assignment_file_standard_file() {
         $doc = new LW_document(9, 25);
 
-        $result = $doc->get_assignment_file('/misc/nested-sorter.js', 121);
-        debugging('result: ' . print_r($result, true));
+        $result = $doc->get_assignment_file('/misc/nested-sorter.js');
+        //debugging('result: ' . var_export($result, true));
         $this->assertNotNull($result);
         $this->assertEqual($result['filename'], '/misc/nested-sorter.js');
         $this->assertEqual(strlen($result['data']), $result['filesize']);
     }
   
+    function test_get_file_contextid_no_contextid() {
+        $doc = new LW_document();
+        
+        $result = $doc->get_file_contextid('/', 'nofile.txt');
+        $this->assertNull($result);
+    }
+    
+    function test_get_file_contextid_standard_file() {
+        $doc = new LW_document(9, 22);
+        
+        $result = $doc->get_file_contextid('/', 'homework.xml');
+        $this->assertNotNull($result);
+        $this->assertEqual($result, 91);
+    }
+    
+    function test_get_file_contextid_nested_file() {
+        $doc = new LW_document(9, 25);
+        
+        $result = $doc->get_file_contextid('/misc/', 'nested-sorter.js');
+        $this->assertNotNull($result);
+        $this->assertEqual($result, 121);
+    }
 }
 ?>
