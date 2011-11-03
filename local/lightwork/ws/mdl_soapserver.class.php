@@ -40,7 +40,7 @@ class mdl_soapserver extends server {
     public $fault;
     public $session;
     const UNAUTHORISED_MESSAGE ='Unauthorised access, user does not have Lightwork Capability';
-    const SERVICE_VERSION = '3.1.1';
+    const SERVICE_VERSION = '3.1';
 
     /**
      * Constructor method.
