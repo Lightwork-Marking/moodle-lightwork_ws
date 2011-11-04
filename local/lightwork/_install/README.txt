@@ -10,23 +10,17 @@ should be directed to the forums at http://lightwork.massey.ac.nz.
 See also http://moodle.org/mod/data/view.php?d=13&rid=2743
 
 Please read the installation FAQ at http://lightwork.massey.ac.nz/wiki/fat/Installation_FAQ
-In particular please note that:
-
-* Lightwork encrypts password data that is passed between the Lightwork client and Moodle.
-  This means that your Moodle installation will need to be configured to generate a public and
-  private key pair. See the section at the end of this file for instructions on how to do this.
 
 Perform the following steps:
 
-1) Extract the Lightwork Moodle zip file to a temporary location
-2) Copy the 3rd party pear mail libraries in lib/pear/Mail to $moodledir/lib/pear/Mail. The included
-   versions of these libraries are Mail_Mime-1.8.0 and Mail_mimeDecode-1.5.4.
-3) Copy the directory lightwork to $moodledir/local
-4) Insert the extra lines contained in mod-assignment-lib.patch into the view_intro() function and 
-   delete_instance($assignment) function in the file $moodledir/mod/assignment/lib.php (Note that 
-   the contents of this patch have changed in 2.4.6, so that if you have already done this for a 
-   version prior to 2.4.6, then you will need to repeat the process) 
-5) insert the extra lines contained in file.patch into /moodle/file.php. 
+1) Configure your Moodle installation for Public key encryption as described below
+2) Extract the Lightwork Moodle zip file to a temporary location
+3) Copy the 3rd party pear mail libraries in lib-pear-Mail to $moodledir/lib/pear/Mail (you may have to
+   create the Mail directory). The included versions of these libraries come from Mail_Mime-1.8.0 
+   and Mail_mimeDecode-1.5.4.
+4) Copy the directory lightwork and it's contents to $moodledir/local
+5) Insert the extra lines contained in mod-assignment-lib.patch into the delete_instance($assignment) 
+   function in the file $moodledir/mod/assignment/lib.php  
 6) Run the notifications process in Moodle
 7) Connect to your Moodle server using the Lightwork client (See separate instructions 
    in the client download)
@@ -42,11 +36,9 @@ Configuring your Moodle installation to use Public key encryption
    Note that it is best to rename this file to openssl.conf to stop Windows from assuming that it is
    a 'speeddial' file.
 3) Restart your computer to allow Windows to register this new variable
-4) In Moodle, open the 'Administration-Networking-Settings' page. Set Networking to 'On' and save
-   the changes. A Public key certificate should be generated and displayed on the page.
-5) If the certificate is not generated correctly (the Public key text is not displayed) then it is possible
-   that the country setting that is used to generate the certificate has not been set. Check this by searching
-   for the word 'country' in the search box at the bottom of the Site Administration block.
+4) In Moodle, open the 'Site administration-Advanced features' page and set Networking to 'On'. 
+   A 'Networking' link should be displayed and a Public key certificate should be generated and displayed 
+   on the 'Networking-Settings' page.
    
 If you still have problems, feel free to post questions to the Lightwork team in one of the forums
 at http://lightwork.massey.ac.nz/projects/fat/boards
