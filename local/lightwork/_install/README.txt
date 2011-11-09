@@ -13,29 +13,38 @@ Please read the installation FAQ at http://lightwork.massey.ac.nz/wiki/fat/Insta
 
 Perform the following steps:
 
-1) Configure your Moodle installation for Public key encryption as described below
-2) Extract the Lightwork Moodle zip file to a temporary location
+1) Configure your Moodle installation for Networking and Public key encryption as described below
+2) Extract the Lightwork Moodle2 zip file to a temporary location
 3) Copy the 3rd party pear mail libraries in lib-pear-Mail to $moodledir/lib/pear/Mail (you may have to
    create the Mail directory). The included versions of these libraries come from Mail_Mime-1.8.0 
    and Mail_mimeDecode-1.5.4.
 4) Copy the directory lightwork and it's contents to $moodledir/local
 5) Insert the extra lines contained in mod-assignment-lib.patch into the delete_instance($assignment) 
-   function in the file $moodledir/mod/assignment/lib.php  
+   function in the file $moodledir/mod/assignment/lib.php. This patch modifies existing Moodle code
+   so that when the delete assignment link is selected in Moodle, the associated Lightwork tables are
+   deleted in addition to those deleted by Moodle.  
 6) Run the notifications process in Moodle
 7) Connect to your Moodle server using the Lightwork client (See separate instructions 
    in the client download)
     
-Configuring your Moodle installation to use Public key encryption
+Configuring your Moodle installation to use Networking and Public key encryption
 =================================================================================
 1) Verify that your PHP installation has OpenSSL support enabled. You can check this in the
-   Moodle 'Administration-Server-PHP info' page. If it is not enabled, you will need to
+   Moodle 'Site administration-Server-PHP info' page. If it is not enabled, you will need to
    enable it (normally by removing the ';' at the beginning of the ;extension=php_openssl.dll line
    in your php.ini file).
-2) On Windows, you will need create an environment variable OPENSSL_CONF that points to the php
-   open ssl configuration file which is found in the extras/openssl folder within your PHP directory.
-   Note that it is best to rename this file to openssl.conf to stop Windows from assuming that it is
-   a 'speeddial' file.
-3) Restart your computer to allow Windows to register this new variable
+   
+2) Configure Moodle to read your PHP OpenSSL configuration file (In Windows you must rename this file 
+   to openssl.conf to stop Windows from assuming that it is a 'speeddial' file). 
+   You can do this in one of 2 ways:
+   1) Add the line 
+      $CFG->opensslcnf = 'C:/<your PHP installation>/extras/openssl/openssl.conf'; 
+      to your config.php file
+   2) Create an environment variable OPENSSL_CONF that points to the php open ssl configuration file 
+      which is found in the extras/openssl folder within your PHP directory.
+
+3) If using Windows you will need to restart your computer to allow it to register this new variable
+
 4) In Moodle, open the 'Site administration-Advanced features' page and set Networking to 'On'. 
    A 'Networking' link should be displayed and a Public key certificate should be generated and displayed 
    on the 'Networking-Settings' page.

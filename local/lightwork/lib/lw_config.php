@@ -3,7 +3,7 @@
 unset($LW_CFG);
 // This setting will allow additional student information to be displayed
 // This feature will be made available in a future release
-$LW_CFG->user_info_category = "SMS Demographic Data";
+//$LW_CFG->user_info_category = "SMS Demographic Data";
 // This setting allows allows decimal fraction marks to be used.
 // In order to enable students to be graded with marks that include a decimal
 // point and a maximum of 2 digits to the right of the decimal point, the
