@@ -240,7 +240,7 @@ class LW_Marker  {
 
         include_once($CFG->libdir.'/ddllib.php');
         $tiifiletable = new XMLDBTable('tii_files');
-        $useTii = $this->is_tii_type_assignment($assignment) && table_exists($tiifiletable);
+        $useTii = $this->is_tii_type_assignment($assignment) && $DB->get_manager()->table_exists($tiifiletable);
                   
         $plagiarismsettings = false;
         if ($useTii) {
@@ -495,7 +495,7 @@ class LW_Marker  {
         $participants = array();
         $students = array();
         
-        if ($roles = get_roles_with_capability('moodle/legacy:student', CAP_ALLOW, $context)) {
+        if ($roles = get_roles_with_capability('mod/assignment:submit', CAP_ALLOW, $context)) {
             foreach ($roles as $role) {
                     $roleids[]= $role->id;
             }
@@ -562,7 +562,7 @@ class LW_Marker  {
         $participants = array();
         $students = array();
         
-        if ($roles = get_roles_with_capability('moodle/legacy:student', CAP_ALLOW, $context)) {
+        if ($roles = get_roles_with_capability('mod/assignment:submit', CAP_ALLOW, $context)) {
             foreach ($roles as $role) {
                     $roleids[]= $role->id;
             }

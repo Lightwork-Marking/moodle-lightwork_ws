@@ -470,7 +470,7 @@ class server {
             return has_capability('moodle/legacy:admin',
                     get_context_instance(CONTEXT_SYSTEM, SITEID), $userid, false);
         } else {
-            return record_exists('user_admins', 'userid', $userid);
+            return $DB->record_exists('user_admins', 'userid', $userid);
         }
     }
 
@@ -486,6 +486,7 @@ class server {
      * @return boolean
      */
     function isteacher($courseid, $userid, $includeadmin = true) {
+        global $DB;
         if ($includeadmin && $this->isadmin($userid)) {
             return true;
         }
@@ -496,7 +497,7 @@ class server {
                             has_capability('moodle/legacy:editingteacher',
                             get_context_instance(CONTEXT_COURSE, $courseid), $userid, false));
         } else {
-            return record_exists('user_teachers', 'userid', $userid, 'course', $courseid);
+            return $DB->record_exists('user_teachers', 'userid', $userid, 'course', $courseid);
         }
     }
 
@@ -511,6 +512,7 @@ class server {
      * @return boolean
      */
     function isteacherinanycourse($userid, $includeadmin = true) {
+        global $DB;
         if ($includeadmin and $this->isadmin($userid)) {  // admins can do anything
             return true;
         }
@@ -522,7 +524,7 @@ class server {
         /// If this user is assigned as an editing teacher anywhere then return true
         if ($roles = get_roles_with_capability('moodle/legacy:editingteacher', CAP_ALLOW)) {
             foreach ($roles as $role) {
-                if (record_exists('role_assignments', 'roleid', $role->id, 'userid', $userid)) {
+                if ($DB->record_exists('role_assignments', 'roleid', $role->id, 'userid', $userid)) {
                     return true;
                 }
             }
@@ -531,13 +533,13 @@ class server {
         /// If this user is assigned as a non-editing teacher anywhere then return true
         if ($roles = get_roles_with_capability('moodle/legacy:teacher', CAP_ALLOW)) {
             foreach ($roles as $role) {
-                if (record_exists('role_assignments', 'roleid', $role->id, 'userid', $userid)) {
+                if ($DB->record_exists('role_assignments', 'roleid', $role->id, 'userid', $userid)) {
                     return true;
                 }
             }
         }
 
-        return record_exists('user_teachers', 'userid', $userid);
+        return $DB->record_exists('user_teachers', 'userid', $userid);
     }
 
 
@@ -551,6 +553,7 @@ class server {
      * @return boolean
      */
     function isteacheredit($courseid, $userid) {
+        global $DB;
         if ($this->isadmin($userid)) {
             return true;
         }
@@ -559,7 +562,7 @@ class server {
             return has_capability('moodle/legacy:editingteacher',
                     get_context_instance(CONTEXT_COURSE, $courseid), $userid, false);
         } else {
-            return get_field('user_teachers', 'editall', 'userid', $userid, 'course', $courseid);
+            return $DB->get_field('user_teachers', 'editall', 'userid', $userid, 'course', $courseid);
         }
     }
 
@@ -573,6 +576,7 @@ class server {
      * @return boolean
      */
     function iscreator($userid) {
+        global $DB;
         if ($this->isadmin($userid)) {
             return true;
         }
@@ -581,7 +585,7 @@ class server {
             return has_capability('moodle/legacy:coursecreator',
                     get_context_instance(CONTEXT_SYSTEM, SITEID), $userid, false);
         } else {
-            return record_exists('user_coursecreators', 'userid', $userid);
+            return $DB->record_exists('user_coursecreators', 'userid', $userid);
         }
     }
 
