@@ -230,7 +230,7 @@ class LW_Marker  {
         $assignmentsubmissions = $this->assignment_submissions_since($assignmentid,0,false, true);
 
         $cm = get_coursemodule_from_instance('assignment', $assignmentid);
-        $assignment = $DB->get_record('assignment', array('id'=>$cm->instance));
+        $assignment = $DB->get_record('assignment', array('id' => $assignmentid));
         $course = $DB->get_record('course', array('id'=>$assignment->course));
         
         //  Get the assignment object
@@ -278,6 +278,7 @@ class LW_Marker  {
                         );
 
                         foreach ($files as $file) {
+                            if ($file->get_filename() == '.') continue;
                             $submission['files'][$file->get_filename()] = $file;
                             if ($useTii && $plagiarismsettings) {
                                 $tiifile = get_record_select('tii_files', "course='".$course->id.
@@ -396,7 +397,7 @@ class LW_Marker  {
         $courses = new object();
         
         $courses = get_user_capability_course(LW_Common::CAP_MARKLWSUBMISSIONS,$this->uid,false,$fields,'sortorder ASC');
-
+        
         // now get all the ids from those courses and save those against this Marker user object
         $extrafields='m.id, m.course, m.name, m.assignmenttype, m.grade, m.timedue, m.timemodified';
         $coursearray = array();

@@ -33,7 +33,7 @@ class LW_Error {
                 'element'     =>$element,
                 'id'          =>$elementid,
                 'errorcode'   =>$errorcode,
-                'errormessage'=>get_string($errorcode, 'local')
+                'errormessage'=>get_string($errorcode, 'local_lightwork')
         );
     }
 

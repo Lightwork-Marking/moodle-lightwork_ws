@@ -411,7 +411,7 @@ class mdl_soapserver extends server {
         if (!$this->is_lightworkuser_by_assignment($assignment, $this->session->userid)) {
             return new soap_fault('Client', '', self::UNAUTHORISED_MESSAGE);
         }
-        $marker = create_marker($assignment->assignmentttype);
+        $marker = $this->create_marker($assignment->assignmenttype);
         
         $rsubmissions = $marker->assignment_submission_files($assignmentid, $ids['submissionid']);
         $rsubmissions['errors'] = $marker->error->get_errors();
@@ -433,7 +433,7 @@ class mdl_soapserver extends server {
     }
 
     private function zip_submission_file($submissionfile) {
-        global $NUSOAP_SERVER, $CFG;        
+        global $NUSOAP_SERVER, $CFG;
         $tmpzipfile = $CFG->dataroot .'/'. md5(uniqid(time())) .'.zip';
         $zippacker = get_file_packer('application/zip');
         $zippacker->archive_to_pathname($submissionfile['files'], $tmpzipfile);        
