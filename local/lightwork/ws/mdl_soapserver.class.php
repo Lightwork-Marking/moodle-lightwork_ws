@@ -1789,14 +1789,13 @@ class mdl_soapserver extends server {
      * with decimal point marking.
      * @return TRUE if the Moodle instance is compatible, otherwise return FALSE
      */
-    private function isMoodleInstanceCompatibleWithDecimalPointMarking() {
-        global $CFG, $LW_CFG;
+    function isMoodleInstanceCompatibleWithDecimalPointMarking() {
+        global $CFG, $DB;
         include_once($CFG->libdir.'/dmllib.php');
-        $type = column_type('assignment_submissions', 'grade');
-        if ($type == 'N'){
+        $columns = $DB->get_columns('assignment_submissions');
+        $type = $columns['grade']->meta_type;
+        if ($type == 'N') {
             return TRUE; 
-        } elseif ($type == 'F') {
-            return TRUE;
         } else {
             return FALSE;
         }
