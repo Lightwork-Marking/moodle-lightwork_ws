@@ -112,7 +112,7 @@ class LW_document {
      */
     private function collect_children_fileinfo($folder, &$result, $includeannotatedfiles = true) {
         $children = $folder->get_children();
-        //debugging('children: '. print_r($children, true));
+        //LW_Common::lw_debug('children: ', $children);
         
         forEach($children as $child) {
             $params = $child->get_params();
@@ -150,90 +150,97 @@ class LW_document {
             $path_parts['dirname'] = '/';
         }
 
+        //LW_Common::lw_debug('document_save_file() - path_parts: ', $path_parts);
         $context = get_context_instance(CONTEXT_USER, $docowner);
+        //LW_Common::lw_debug('document_save_file() - context: ', $context);
         $draftfileinfo = $this->construct_draftinfo($context, $path_parts, $docowner);
-        
+        //LW_Common::lw_debug('document_save_file() - draft fileinfo: ', $draftfileinfo);
         $this->save_draftfile($draftfileinfo, $docname, $data);
         
-        $this->update_resource($draftfileinfo, $docname, $path_parts);
+        $this->update_resource($draftfileinfo, $docname);
     }
     
     /*
      * Update resource information of a particular file.
      */
-    private function update_resource($draftfileinfo, $docname, $path_parts) {
+    private function update_resource($draftfileinfo, $docname) {
         global $CFG, $DB;
         
-        // Find the resource for this file
         $cm = get_coursemodule_from_instance('assignment', $this->assignmentid, $this->courseid);
-        $resourcemodules = get_coursemodules_in_course('resource', $this->courseid);
-        $resource = new object();
-        $rcm = new object();
-
-        foreach ($resourcemodules as $rm) {
-            if ($rm->section == $cm->section) {
-                // check if resource already exists for this file
-                try {
-                    $resource = $DB->get_record('resource', array('id'=>$rm->instance,'name'=>$path_parts['basename']));
-                } catch (dml_exception $dex) {
-                    error_log('document_save_file dml_exception: '.$dex->getMessage());
-                }
-                if ($resource) {
-                    $resource->coursemodule = $rm->id;
-                    $rcm = $rm;
-                    error_log('document_save_file found resource: '.print_r($resource, TRUE));
-                    break;
-                }
-            }
+        // Find the resource for this file
+        $sql = get_assignment_resource($this->courseid, $this->assignmentid, $docname);
+        //LW_Common::lw_debug('sql: ', $sql);
+        $resources = $DB->get_records_sql($sql);
+        //LW_Common::lw_debug('update_resource() - resources: ', $resources);
+        if (count($resources) > 1) {
+            error_log('more then 1 resources were found for ' . $docname);
+            $this->error->add_error('resource', key($resources), 'multipleresources');
+            return;
         }
-
-        if ($resource->id) {
-            // move file from draft to content
+        $resource = current($resources);
+        //LW_Common::lw_debug('update_resource() - current resource: ', $resource);
+        
+        // If exit update the resource with??
+        if ($resource) {
             $resource->files = $draftfileinfo['itemid'];
             $resource->instance = $resource->id;
-            $csection = $DB->get_record('course_sections', array('id'=>$cm->section));
-            $modarray = explode(",", $csection->sequence);
-            if (!in_array($rcm->id, $modarray)){
-                $this->add_resource_module_to_section($rcm);
-            }
+            $rcm = get_coursemodule_from_instance('resource', $resource->id, $this->courseid, $cm->section);
+            $resource->coursemodule = $rcm->id;
             resource_update_instance($resource, null);
-        } else {
+            $resourceid = $resource->id;
+        } else { 
+            // If resource does not exist, create one
             // create the rubric resource, course module and context
             // should all be done within a database transaction
-            require_once($CFG->dirroot."/course/lib.php");
-            require_once($CFG->dirroot."/mod/resource/locallib.php");
-             
-            $rcmid = $this->save_rcm($rcm, $cm->section);
-            $this->save_resource($rcmid, $docname, $draftfileinfo);
+            $rcmid = $this->create_course_module_resource($cm->section);
+            $resourceid = $this->create_resource($docname, $draftfileinfo, $rcmid);
              
             // creates context if it doesn't exist
             $context = get_context_instance(CONTEXT_MODULE, $rcmid);
         }
-        rebuild_course_cache($this->courseid);
+    
+        // If resource is not of annotation files, add to mdl_course_sections
+        // for display
+        if (! preg_match(self::PATTERN, $docname) > 0) {
+            $mod = $DB->get_record('course_modules', array(
+                    'instance' => $resourceid,
+                    'course'   => $this->courseid,
+                    'section'  => $cm->section
+                     ));
+            $this->add_resource_module_to_section($mod);
+        }
         
-        // TODO throw exception and log error if file cannot be saved
-        //$this->error->add_error('Document', '0', 'dircannotbecreated');
-        //$this->error->add_error('Document', '0', 'cannotopenfile');
+        rebuild_course_cache($this->courseid, TRUE);
     }
     
-    private function save_resource($rcmid, $docname, $draftfileinfo) {
-        $resource->coursemodule = $rcmid;
+    private function create_resource($docname, $draftfileinfo, $rcmid) {
+        global $CFG;
+        require_once($CFG->dirroot."/mod/resource/locallib.php");
+        $resource = new stdClass();
         $resource->course = clean_param($this->courseid, PARAM_INT);
         $resource->name = $docname;
+        $resource->intro = $docname;
         $resource->introformat = 0;
         $resource->tobemigrated = 0;
         $resource->legacyfiles = 0;
         $resource->display = 0;
         $resource->filterfiles = 0;
         $resource->revision = 1;
+        $resource->coursemodule = $rcmid;
         $resource->files = $draftfileinfo['itemid'];
         $resourceid = resource_add_instance($resource, null);
-        error_log('document_save_file $resourceid: '.$resourceid);
+        error_log('save_resource resourceid: '.$resourceid . ' - resource: ' . var_export($resource, TRUE));
+        
+        return $resourceid;
     }
     
-    private function save_rcm($rcm, $section) {
+    private function create_course_module_resource($section) {
+        global $CFG, $DB;
+        require_once($CFG->dirroot."/course/lib.php");
+        
+        $rcm = new stdClass();
         $rcm->course = clean_param($this->courseid, PARAM_INT);
-        $rcm->module = LW_Common::MOD_RESOURCE; // resource module
+        $rcm->module = $DB->get_field('modules', 'id', array('name'=>'resource')); // resource module
         $rcm->instance = 0;
         $rcm->section = $section;
         $rcm->score = 0;
@@ -252,17 +259,22 @@ class LW_document {
         
         $rcmid = add_course_module($rcm);
         $rcm->id = $rcmid;
-        $this->add_resource_module_to_section($rcm);
-        error_log('document_save_file $rcmid: '.$rcmid);
+        // $this->add_resource_module_to_section($rcm);
+        error_log('save_rcm rcmid: '.$rcmid . ' - rcm: ' . var_export($rcm, TRUE));
         
         return $rcmid;
     }
     
     private function construct_draftinfo($context, $path_parts, $docowner) {
+        // generate somewhat unique itemid by hashsing the fullpath filename
+        // since md5 hash is too big too convert to integer, we just grab
+        // the first 8 digits of the md5 hash.
+        $hash = substr((md5($path_parts['dirname'] . $path_parts['basename'])), 0, 8);
+        $itemid = hexdec($hash);
         return array('contextid'   => $context->id,
                      'component'   => 'user',
                      'filearea'    => 'draft',
-                     'itemid'      => $this->assignmentid,
+                     'itemid'      => $itemid,
                      'filepath'    => $path_parts['dirname'],
                      'filename'    => $path_parts['basename'],
                      'userid'      => $docowner,
@@ -279,15 +291,20 @@ class LW_document {
                                    $draftfileinfo['filename']);
         if ($draftfile) {
             try {
+                //LW_Common::lw_debug('  deleting draft info: ' . var_export($draftfile, true));
                 $draftfile->delete();
+                //LW_Common::lw_debug('  delete successful');
             } catch (dml_exception $dex) {
-                error_log('document_save_file dml_exception: '.$dex->getMessage());
+                //LW_Common::lw_debug('save_draftfile dml_exception: '. $dex->getMessage());
+                error_log('save_draftfile dml_exception: '.$dex->getMessage());
             }
         }
         try {
+            //LW_Common::lw_debug('save_draftfile file_info: ', var_export($draftfileinfo, true));
             $fs->create_file_from_string($draftfileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
-        } catch (file_exception $fex){
-            error_log('document_save_file file_exception: '.$fex->getMessage());
+        } catch (file_exception $fex) {
+            //LW_Common::lw_debug('save_draftfile file_exception: '. $fex->getMessage());
+            error_log('save_draftfile file_exception: '.$fex->getMessage());
         }
     }
     
@@ -342,7 +359,7 @@ class LW_document {
             );
              
         }
-        error_log('get_assignment_file $result: ' . print_r($result, TRUE));
+        error_log('get_assignment_file result: ' . print_r($result, TRUE));
         return $result;
     }
     
@@ -373,34 +390,26 @@ class LW_document {
      * @param unknown_type $mod
      * @param unknown_type $beforemod
      */
-    private function add_resource_module_to_section($mod, $beforemod=NULL) {
+    private function add_resource_module_to_section($mod) {
         global $DB;
         if ($section = $DB->get_record("course_sections", array("id"=>$mod->section))) {
 
             $section->sequence = trim($section->sequence);
-
+            
             if (empty($section->sequence)) {
                 $newsequence = "$mod->id";
-
-            } else if ($beforemod) {
-                $modarray = explode(",", $section->sequence);
-
-                if ($key = array_keys($modarray, $beforemod->id)) {
-                    $insertarray = array($mod->id, $beforemod->id);
-                    array_splice($modarray, $key[0], 1, $insertarray);
-                    $newsequence = implode(",", $modarray);
-
-                } else {  // Just tack it on the end anyway
-                    $newsequence = "$section->sequence,$mod->coursemodule";
-                }
-
             } else {
-                $newsequence = "$section->sequence,$mod->id";
+                $modarray = explode(",", $section->sequence);
+                
+                if (!in_array($mod->id, $modarray)) {
+                    $newsequence = "$section->sequence,$mod->id";
+                } else {
+                    return;
+                }
             }
 
             $DB->set_field("course_sections", "sequence", $newsequence, array("id"=>$section->id));
             return $section->id;     // Return course_sections ID that was used.
-
         } else {
             // TODO throw exception
         }

@@ -205,7 +205,6 @@ class LW_Marker  {
      * @param   array|int $assigmentsubmissionlist    An array or id of submission ids
      * @return  array     $rsubmissions       Array of submission file and turnitin records
      */
-
     function assignment_submission_files($assignmentid, $assignmentsubmissionlist) {
         global $CFG, $DB;
 
@@ -281,7 +280,7 @@ class LW_Marker  {
                             if ($file->get_filename() == '.') continue;
                             $submission['files'][$file->get_filename()] = $file;
                             if ($useTii && $plagiarismsettings) {
-                                $tiifile = get_record_select('tii_files', "course='".$course->id.
+                                $tiifile = $DB->get_record_select('tii_files', "course='".$course->id.
                                                 "' AND module='".get_field('modules', 'id',array('name'=>'assignment')).
                                                 "' AND instance='".$cm->instance.
                                                 "' AND userid='".$submissionarr['userid'].
@@ -676,7 +675,7 @@ class LW_Marker  {
         
         $context = get_context_instance(CONTEXT_COURSE, $courseid);
         
-        if ($roles = get_roles_with_capability('moodle/legacy:student', CAP_ALLOW, $context)) {
+        if ($roles = get_roles_with_capability('mod/assignment:submit', CAP_ALLOW, $context)) {
             foreach ($roles as $role) {
                     $roleids[]= $role->id;
             }
@@ -717,7 +716,7 @@ class LW_Marker  {
      */
     public function save_marking($assignmentmarkings, $releaseMarking = false, $allstudents) {
         global $CFG, $DB;
-        require_once("$CFG->libdir/gradelib.php");
+        require_once("$CFG->libdir/grade/grade_item.php");
         $rmarkings = array();
         foreach ($assignmentmarkings as $activity => $markings) {             
             $markingrecords = $this->get_marking_allocation($activity);
@@ -727,8 +726,12 @@ class LW_Marker  {
                 continue;
             }
             if ($releaseMarking){
-                $assignment_grading_info = grade_get_grades($assignment->course, 'mod', 'assignment', $assignment->id, null);
-                if ($assignment_grading_info->items[0]->locked){
+                //$assignment_grading_info = grade_get_grades($assignment->course, 'mod', 'assignment', $assignment->id, null);
+                $grade_item = grade_item::fetch(array('courseid'     => $assignment->course, 
+                                                       'itemtype'     => 'mod',
+                                                       'itemmodule'   => 'assignment',
+                                                       'iteminstance' => $assignment->id));
+                if ($grade_item && $grade_item->locked) {
                     error_log('grade locked');
                     $this->error->add_error('Marking', $activity, 'assignmentgradeitemlocked');
                     continue;
@@ -746,7 +749,7 @@ class LW_Marker  {
             if ($allstudents == 0){
                 $studentparticipants = $this->load_submitted_students($context, $assignment->id, 0);
             } else {
-                $studentparticipants = $this->course_participants_since($assignment->course, 0, 'moodle/legacy:student');
+                $studentparticipants = $this->course_participants_since($assignment->course, 0, 'mod/assignment:submit');
             }
             $markerparticipants = $this->course_participants_since($assignment->course, 0, LW_Common::CAP_MARKLWSUBMISSIONS);
              
@@ -1152,7 +1155,7 @@ class LW_Marker  {
 
                 /*****  Upload the file *****/
                 if (isset($marking['annotated_records'])) {
-                    $destination = $CFG->dataroot.'/'.$assignmentinstance->file_area_name($marking['markable']).'/responses';
+                    $destination = $CFG->dataroot.'/'.$marking['markable'].'/responses';
                     return $this->upload_annotated_files($marking['annotated_records'], $destination,  $assignmentinstance,  $marking['markable']);
                 }
             }
@@ -1237,7 +1240,7 @@ class LW_Marker  {
 
                 /*****  Upload the file *****/
                 if (isset($marking['annotated_records'])) {
-                    $destination = $CFG->dataroot.'/'.$assignmentinstance->file_area_name($user->student).'/responses';
+                    $destination = $CFG->dataroot.'/'.$user->student.'/responses';
                     return $this->upload_annotated_files($marking['annotated_records'], $destination , $assignmentinstance, $user->student);
                 }
             }

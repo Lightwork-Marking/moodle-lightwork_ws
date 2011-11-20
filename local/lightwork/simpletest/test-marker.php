@@ -20,7 +20,7 @@ require_once($CFG->dirroot . '/local/lightwork/lib/lw_error.php'); // Need the l
 class lw_marker_test extends UnitTestCase {
 
 
-
+/*
     function test_construct_empty() {
         // shouldnt be able to create one without a valid UID in the constructor
         $this->marker = new LW_Marker();
@@ -128,7 +128,15 @@ class lw_marker_test extends UnitTestCase {
         $this->assertNotTrue(array_key_exists('errorcode', $returnmarkingitem));
     	
     }
-
+*/
+    
+    public function test_assignment_submission_files() {
+        $marker = new LW_Marker(3, LW_Common::STUDENT_MARKING);
+        
+        $result = $marker->assignment_submission_files(1, array(1));
+        
+        debugging("result: " . var_export($result, true));
+    }
 
     public function setUp() {
         include("local-vars.php");

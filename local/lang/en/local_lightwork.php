@@ -43,6 +43,7 @@ $string['studentgradeitemlocked'] = 'Student grade item is locked';
 $string['studentgradeitemoverridden'] = 'Student grade item is overridden';
 $string['unsupportedassignmenttype'] = 'Unsupported Assignment type';
 $string['rounddownmarkwarning'] = 'Warning, mark was rounded down';
+$string['multipleresources'] = 'Multiple resources found for an assignment file';
 
 //team support error message start
 $string['teamnotcourseparticipanterror'] ='Cannot create record. Team is not in this course';

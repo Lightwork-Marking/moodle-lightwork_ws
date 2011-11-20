@@ -48,6 +48,14 @@ class LW_Common {
                "{assignment} a on sb.assignment=a.id ".
                "WHERE a.id= '$assignmentId' AND sb.data2 = 'submitted')";
     }
+    
+    static function lw_debug($message, $data = null) {
+        if ($data) {
+            echo '<div class="notifytiny">' . $message . var_export($data, TRUE) . '</div>';
+        } else {
+            echo '<div class="notifytiny">' . $message . '</div>';
+        }
+    }
 }
 
 ?>

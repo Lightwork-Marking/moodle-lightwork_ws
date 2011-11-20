@@ -2,7 +2,7 @@
 /**
  * Unit tests for LW_Document.
  *
- * WARNING: This test case is NOT portable. Due to change of Moodle 2.0 File API, it is hard to automatically 
+ * !!!WARNING!!!: This test case is NOT portable. Due to change of Moodle 2.0 File API, it is hard to automatically 
  * create test fixtures for this. So all the following test are based on manually setup data in local moodle instance.
  * 
  * @author wirianto
@@ -19,23 +19,25 @@ require_once('../../../config.php');
 require_once($CFG->dirroot . '/local/lightwork/lib/lw_document.php');
 
 class testlw_document extends UnitTestCase  {
-
+/*
     function test_document_links_without_file() {
         $doc = new LW_document();
         $this->assertEqual($doc->document_links(), '');
     }
 
     function test_document_links_with_single_file() {
-        $doc = new LW_document(9, 22);
+        $doc = new LW_document(2, 2);
         $result = $doc->document_links();
-        $this->assertPattern('/homework.xml/', $result);
+        $this->assertPattern('/second.txt/', $result);
     }
 
     function test_document_links_with_multiple_files() {
-        $doc = new LW_document(9, 23);
+        $doc = new LW_document(2, 1);
         $result = $doc->document_links();
-        $this->assertPattern('/sorter.js/', $result);
-        $this->assertPattern('/svn_log.txt/', $result);
+        $this->assertPattern('/first.txt/', $result);
+        //LW_Common::lw_debug('result', $result);
+        $this->assertPattern('/Assignment 1 Rubric.pdf/', $result);
+        $this->assertPattern('/saved_file_2.txt/', $result);
     }
 
     function test_document_links_with_nested_file() {
@@ -146,24 +148,24 @@ class testlw_document extends UnitTestCase  {
         $this->assertPattern('/annotated\/nested\/anno_file.txt/', $metas[2]['metadatainformation']);
         $this->assertPattern('/top2\/nested\/third.txt/', $metas[3]['metadatainformation']);
     }
-/*
+
     function test_document_save_file() {
-        $doc = new LW_document(9, 27);
+        $doc = new LW_document(2, 3);
 
-        global $CFG, $DB;
+        //global $CFG, $DB;
 
-        $filename = 'saved_file.txt';
+        $filename = 'ass_3_file_2.txt';
 
-        $doc->document_save_file('dummy data content', 'saved_file.txt', 201);
+        $doc->document_save_file('dummy data content for saved annotated file 3-2	', $filename, 3);
 
-        $result = $DB->get_record("files", array("filename" => "saved_file.txt", "component" => "mod_resource"), '*', IGNORE_MULTIPLE);
-        debugging('result: ' . print_r($result, true));
-        $this->assertNotNull($result);
-        $this->assertEqual($result->filename, 'saved_file.txt');
-        $this->assertEqual($result->filepath, '/');
-        $this->assertEqual($result->filesize, 18);
+        //$result = $DB->get_record("files", array("filename" => $filename, "component" => "mod_resource"), '*', IGNORE_MULTIPLE);
+        //LW_Common::lw_debug('result: ', $result);
+        //$this->assertNotNull($result);
+        //$this->assertEqual($result->filename, $filename);
+        //$this->assertEqual($result->filepath, '/');
+        //$this->assertEqual($result->filesize, 35);
     }
-*/
+
     function test_get_assignment_file_no_file() {
         $doc = new LW_document();
 
@@ -208,5 +210,8 @@ class testlw_document extends UnitTestCase  {
         $this->assertNotNull($result);
         $this->assertEqual($result, 121);
     }
+*/
+
 }
+
 ?>

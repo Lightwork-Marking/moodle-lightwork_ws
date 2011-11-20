@@ -51,30 +51,47 @@ function get_student_participant_sql($userid, $contextid) {
 
 function get_assignment_resource_id($courseid, $assignmentid) {
     return "SELECT cm.id ".
-            "FROM {course_modules} cm, {modules} md, {resource} m ".
+            "FROM {course_modules} cm, {modules} md, {resource} rs ".
             "WHERE cm.course = {$courseid} ". 
-            "AND cm.instance = m.id ". 
+            "AND cm.instance = rs.id ". 
             "AND md.name = 'resource' ". 
             "AND md.id = cm.module ".
             "AND cm.section = (".
               "SELECT cm.section ".
               "FROM {course_modules} cm ".
               "JOIN {modules} md ON md.id = cm.module ".
-              "JOIN mdl_assignment m ON m.id = cm.instance ".
-              "WHERE m.id = " . $assignmentid . " AND md.name = 'assignment')";
+              "JOIN {assignment} a ON a.id = cm.instance ".
+              "WHERE a.id = " . $assignmentid . " AND md.name = 'assignment')";
 }
 
 function find_file_contextid($courseid, $filepath, $filename) {
     return "SELECT f.contextid ". 
-		   "FROM {files} f, {context} ctx, {course_modules} modl ".
+		   "FROM {files} f, {context} ctx, {course_modules} modl, {resource} rs ".
            "WHERE f.contextid = ctx.id ".
            "AND ctx.instanceid = modl.id ".
            "AND modl.course = {$courseid} ".
-           "AND modl.module = 14 ". // 14 is mod_resource
+           "AND modl.module = rs.id ". 
+           "AND rs.name = 'resource' ".
            "AND f.component = 'mod_resource' ".
            "AND f.filearea = 'content' ".
            "AND f.filepath = '{$filepath}' ".
            "AND f.filename = '{$filename}'";
+}
+
+function get_assignment_resource($courseid, $assignmentid, $filename) {
+    return "SELECT rs.* ".
+            "FROM {course_modules} cm, {modules} md, {resource} rs ".
+            "WHERE cm.course = {$courseid} ". 
+            "AND cm.instance = rs.id ". 
+            "AND md.name = 'resource' ". 
+            "AND md.id = cm.module ".
+            "AND rs.name = '{$filename}' ".
+            "AND cm.section = (".
+              "SELECT cm.section ".
+              "FROM {course_modules} cm ".
+              "JOIN {modules} md ON md.id = cm.module ".
+              "JOIN {assignment} a ON a.id = cm.instance ".
+              "WHERE a.id = " . $assignmentid . " AND md.name = 'assignment')";
 }
 
 ?>
