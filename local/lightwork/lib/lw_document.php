@@ -155,7 +155,7 @@ class LW_document {
         //LW_Common::lw_debug('document_save_file() - context: ', $context);
         $draftfileinfo = $this->construct_draftinfo($context, $path_parts, $docowner);
         //LW_Common::lw_debug('document_save_file() - draft fileinfo: ', $draftfileinfo);
-        $this->save_draftfile($draftfileinfo, $docname, $data);
+        $this->save_file($draftfileinfo, $docname, $data);
         
         $this->update_resource($draftfileinfo, $docname);
     }
@@ -265,7 +265,7 @@ class LW_document {
         return $rcmid;
     }
     
-    private function construct_draftinfo($context, $path_parts, $docowner) {
+    function construct_draftinfo($context, $path_parts, $docowner) {
         // generate somewhat unique itemid by hashsing the fullpath filename
         // since md5 hash is too big too convert to integer, we just grab
         // the first 8 digits of the md5 hash.
@@ -281,30 +281,30 @@ class LW_document {
                      'sortorder'   => 0);
     }
     
-    private function save_draftfile($draftfileinfo, $docname, $data) {
+    function save_file($fileinfo, $docname, $data) {
         $fs = get_file_storage();
-        $draftfile = $fs->get_file($draftfileinfo['contextid'],
-                                   $draftfileinfo['component'],
-                                   $draftfileinfo['filearea'],
-                                   $draftfileinfo['itemid'],
-                                   $draftfileinfo['filepath'],
-                                   $draftfileinfo['filename']);
-        if ($draftfile) {
+        $file = $fs->get_file($fileinfo['contextid'],
+                              $fileinfo['component'],
+                              $fileinfo['filearea'],
+                              $fileinfo['itemid'],
+                              $fileinfo['filepath'],
+                              $fileinfo['filename']);
+        if ($file) {
             try {
-                //LW_Common::lw_debug('  deleting draft info: ' . var_export($draftfile, true));
-                $draftfile->delete();
+                //LW_Common::lw_debug('  deleting file: ' . var_export($file, true));
+                $file->delete();
                 //LW_Common::lw_debug('  delete successful');
             } catch (dml_exception $dex) {
                 //LW_Common::lw_debug('save_draftfile dml_exception: '. $dex->getMessage());
-                error_log('save_draftfile dml_exception: '.$dex->getMessage());
+                error_log('save_file dml_exception: '.$dex->getMessage());
             }
         }
         try {
-            //LW_Common::lw_debug('save_draftfile file_info: ', var_export($draftfileinfo, true));
-            $fs->create_file_from_string($draftfileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
+            //LW_Common::lw_debug('save_file file_info: ', var_export($fileinfo, true));
+            $fs->create_file_from_string($fileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
         } catch (file_exception $fex) {
             //LW_Common::lw_debug('save_draftfile file_exception: '. $fex->getMessage());
-            error_log('save_draftfile file_exception: '.$fex->getMessage());
+            error_log('save_file file_exception: '.$fex->getMessage());
         }
     }
     

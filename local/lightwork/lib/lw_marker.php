@@ -1161,8 +1161,7 @@ class LW_Marker  {
 
                 /*****  Upload the file *****/
                 if (isset($marking['annotated_records'])) {
-                    $destination = $CFG->dataroot.'/'.$marking['markable'].'/responses';
-                    return $this->upload_annotated_files($marking['annotated_records'], $destination,  $assignmentinstance,  $marking['markable']);
+                    return $this->upload_annotated_files($marking['annotated_records'],  $assignmentinstance, $submission, $cm);
                 }
             }
         } else {
@@ -1203,7 +1202,7 @@ class LW_Marker  {
                 /*****  Upload team annotated files *****/
                 if (isset($marking['annotated_records'])) {
                     $destination = $assignmentinstance->team_file_area($marking['markable']).'/responses';
-                    return $this->upload_annotated_files($marking['annotated_records'], $destination , $assignmentinstance, $marking['markable']);
+                    return $this->upload_annotated_files($marking['annotated_records'], $destination, $assignmentinstance, $marking['markable']);
                 }
                 return true;
             }
@@ -1246,15 +1245,43 @@ class LW_Marker  {
 
                 /*****  Upload the file *****/
                 if (isset($marking['annotated_records'])) {
-                    $destination = $CFG->dataroot.'/'.$user->student.'/responses';
-                    return $this->upload_annotated_files($marking['annotated_records'], $destination , $assignmentinstance, $user->student);
+                    return $this->upload_annotated_files($marking['annotated_records'], $assignmentinstance, $submission, $cm);
                 }
             }
         }
         return true;
     }
+    
+    function upload_annotated_files($annotatedRecords, $assignmentinstance, $submission, $cm) {        
+        $lw_doc = new LW_document($assignmentinstance->course->id, $assignmentinstance->assignment->id);
+        foreach ($annotatedRecords as $annotatedRecord) {
+            $path_parts = pathinfo($annotatedRecord['filename']);
+            if ($path_parts['dirname'] === '.') {
+                $path_parts['dirname'] = '/';
+            }
+            
+            $context = get_context_instance(CONTEXT_USER, $this->uid);
+            $draftfileinfo = $lw_doc->construct_draftinfo($context, $path_parts, $this->uid);
+            $lw_doc->save_file($draftfileinfo, $annotatedRecord['filename'], $annotatedRecord['data']);
+            $response_fileinfo = $this->construct_response_fileinfo($draftfileinfo, $submission, $cm);
+            $lw_doc->save_file($response_fileinfo, $annotatedRecord['filename'], $annotatedRecord['data']);
+        }
+    }
+    
+    private function construct_response_fileinfo($draftfileinfo, $submission, $cm) {
+        $context = get_context_instance(CONTEXT_MODULE, $cm->id);
+        
+        return array('contextid'   => $context->id,
+                     'component'   => 'mod_assignment',
+                     'filearea'    => 'response',
+                     'itemid'      => $submission->id,
+                     'filepath'    => $draftfileinfo['filepath'],
+                     'filename'    => $draftfileinfo['filename'],
+                     'userid'      => $draftfileinfo['userid'],
+                     'sortorder'   => 0);
+    }
 
-    function upload_annotated_files($annotatedRecords, $destination,  $assignmentinstance,  $ownerid) {
+    function old_upload_annotated_files($annotatedRecords, $destination,  $assignmentinstance,  $ownerid) {
         global $CFG;
         require_once("$CFG->dirroot/lib/uploadlib.php");
        // error_log('start to upload file');
@@ -1279,7 +1306,7 @@ class LW_Marker  {
             $um = new upload_manager('newfile',false,true,$assignmentinstance->course,false,0,true);
 
             $um->files['newfile'] = array( 	'name'      => $annotatedRecord['filename'],
-                                'type'      => substr($annotatedRecord['contenttype'],0,strpos($annotatedRecord['contenttype'],';')),
+                                'type'      => substr($annotatedresresRecord['contenttype'],0,strpos($annotatedRecord['contenttype'],';')),
                                 'tmp_name'  => $tmpfile,
                                 'error'     => 0,
                                 'size'      => filesize($tmpfile));
