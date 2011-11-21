@@ -717,15 +717,16 @@ class LW_Marker  {
     public function save_marking($assignmentmarkings, $releaseMarking = false, $allstudents) {
         global $CFG, $DB;
         require_once("$CFG->libdir/grade/grade_item.php");
+        require_once("$CFG->libdir/grade/grade_grade.php");
         $rmarkings = array();
         foreach ($assignmentmarkings as $activity => $markings) {             
             $markingrecords = $this->get_marking_allocation($activity);
             $assignment = $DB->get_record('assignment', array('id'=>$activity));
-            if (!$assignment){
+            if (!$assignment) {
                 $this->error->add_error('Marking', $activity, 'noassignmentfound');
                 continue;
             }
-            if ($releaseMarking){
+            if ($releaseMarking) {
                 //$assignment_grading_info = grade_get_grades($assignment->course, 'mod', 'assignment', $assignment->id, null);
                 $grade_item = grade_item::fetch(array('courseid'     => $assignment->course, 
                                                        'itemtype'     => 'mod',
@@ -780,14 +781,19 @@ class LW_Marker  {
                     continue;
                 }
                 $grading_info = null;
-                if ($releaseMarking){
-                    $grading_info = grade_get_grades($assignment->course, 'mod', 'assignment', $assignment->id, $marking['markable']);
-                    if ($grading_info->items[0]->grades[$marking['markable']]->locked){
+                if ($releaseMarking) {
+                    //$grading_info = grade_get_grades($assignment->course, 'mod', 'assignment', $assignment->id, $marking['markable']);
+                    $grade_item = grade_item::fetch(array('courseid'     => $assignment->course, 
+                                                          'itemtype'     => 'mod',
+                                                          'itemmodule'   => 'assignment',
+                                                          'iteminstance' => $assignment->id));
+                    $grading_info = grade_grade::fetch_users_grades($grade_item, array($marking['markable']));
+                    if ($grading_info[$marking['markable']]->is_locked()) {
                         error_log('student grade item locked id ->'.$marking['markable']);
                     	$this->error->add_error('Marking', $marking['markable'], 'studentgradeitemlocked');
                         continue;
                     }
-                    if ($grading_info->items[0]->grades[$marking['markable']]->overridden){
+                    if ($grading_info[$marking['markable']]->overridden){
                         error_log('student grade item overridden id ->'.$marking['markable']);
                     	$this->error->add_error('Marking', $marking['markable'], 'studentgradeitemoverridden');
                         continue;
@@ -1123,7 +1129,7 @@ class LW_Marker  {
 
             $submission = $assignmentinstance->get_submission($marking['markable'], true);  // Get or make one
 
-            if (!$grading_info->items[0]->grades[$marking['markable']]->locked && !$grading_info->items[0]->grades[$marking['markable']]->overridden) {
+            if (!$grading_info[$marking['markable']]->is_locked() && !$grading_info[$marking['markable']]->overridden) {
                 if ($assignment->assignmenttype != LW_Common::FEEDBACK_TYPE){
                     if ($LW_CFG->isDecimalPointMarkingEnabled){
                         $submission->grade = clean_param($marking['grade'], PARAM_NUMBER);
