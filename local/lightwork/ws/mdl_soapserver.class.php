@@ -1133,9 +1133,8 @@ class mdl_soapserver extends server {
         $errors = array();
         $error = new LW_Error();
         
-        include_once($CFG->libdir.'/ddllib.php');
         $teamtable = new XMLDBTable('team');
-        $teamAssignmentTypeInstalled = table_exists($teamtable);
+        $teamAssignmentTypeInstalled = $DB->get_manager()->table_exists($teamtable);
         
         //  validate the input and make sure it is in an array
         if (is_array($ids['assignmentid'])) {
@@ -1160,6 +1159,7 @@ class mdl_soapserver extends server {
                 $currentassignmentids[] = $assignment['id'];
                 $assignmentobject = new Object();
                 $assignmentobject->id = $assignment['id'];
+                $assignmentobject->assignmenttype = $assignment['assignmenttype'];
                 $assignmentobject->courseid = $course['id'];
                 $currentassignments[] = $assignmentobject;
             }

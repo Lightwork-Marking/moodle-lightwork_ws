@@ -93,29 +93,6 @@ class LW_Rubric {
     }
 
     /**
-     * Load a LW Rubric by lwid
-     * @param  lwid     integer lwid of the rubric we want to fetch
-     * @return integer  rubric record id, null if not found
-     */
-    //function get_bylwid($lwid) {
-    //    if (!is_numeric($lwid) || ($lwid<1)) {
-    //        return null;
-   //    }
-   //     if ($rubric = get_record("lw_rubric", "lwid", $lwid)) {
-   //         $this->id = $rubric->id;
-   //         $this->xmltext = $rubric->xmltext;
-   //         $this->activity = $rubric->activity;
-   //         $this->activitytype = $rubric->activitytype;
-   //         $this->complete = $rubric->complete;
-   //         $this->deleted = $rubric->deleted;
-   //         $this->timemodified = $rubric->timemodified;
-   //         $this->lwid = $lwid;
-   //         return $this->id;
-   //     }
-   //     return null;
-   // }
-
-    /**
      * Save a rubric by modifiedtime (from LW client)
      * @return   integer  saved rubric id if save ok, null if not
      */
