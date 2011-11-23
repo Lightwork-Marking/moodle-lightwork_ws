@@ -557,7 +557,7 @@ class mdl_soapserver extends server {
         global $NUSOAP_SERVER, $CFG, $DB;
 
         $rrubrics = array('markingrubricresponses'=>array('markingrubricresponse'));
-        $markingrubrics = array('markingrubric'=>array());
+        $markingrubrics = array('markingRubric'=>array());
         $rubrics = array();
         $timemodified = (empty($timemodified) ? 0 : $timemodified);
         if (!$this->validate_session($sesskey)) {
@@ -566,15 +566,17 @@ class mdl_soapserver extends server {
             $rubric = new LW_Rubric();
 
             if (isset($saveMarkingRubrics['markingRubric']['id'])) {
-                $markingrubrics['markingrubric'][] = $saveMarkingRubrics['markingRubric'];
+            	// One rubric to save
+                $markingrubrics['markingRubric'][] = $saveMarkingRubrics['markingRubric'];
             }
             else {
+            	// Multiple rubrics to save and so nusoap has added them to an array
                 $markingrubrics = $saveMarkingRubrics;
             }
 
             $attachments = $NUSOAP_SERVER->getAttachments();
 
-            foreach ($markingrubrics['markingrubric'] as $markingrubric) {
+            foreach ($markingrubrics['markingRubric'] as $markingrubric) {
                 //check the assignment exists and the lightwork user capability.
                 $assignment = $DB->get_record('assignment', array('id'=>$markingrubric['activity']));
                 if (!$assignment){
