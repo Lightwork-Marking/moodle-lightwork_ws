@@ -1133,9 +1133,7 @@ class mdl_soapserver extends server {
         $errors = array();
         $error = new LW_Error();
         
-        $teamtable = new XMLDBTable('team');
-        $teamAssignmentTypeInstalled = $DB->get_manager()->table_exists($teamtable);
-        
+        $teamAssignmentTypeInstalled = $DB->get_manager()->table_exists('team');        
         //  validate the input and make sure it is in an array
         if (is_array($ids['assignmentid'])) {
             $assignmentids = $ids['assignmentid'];
@@ -1189,7 +1187,7 @@ class mdl_soapserver extends server {
                     //delete all team and team_student in this assignment
                     if ($teamAssignmentTypeInstalled) {
                         $teams = $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
-                                 " FROM {$CFG->prefix}team ".
+                                 " FROM {team}".
                                  " WHERE assignment = ".$assignmentid);
                         if ($teams) {
                             //delete all team_student in this team
@@ -1221,7 +1219,7 @@ class mdl_soapserver extends server {
             //validate all assignment submission's course participants and user deletion.
             
             if ($submissions = $DB->get_records_sql("SELECT id,  userid ".
-                                                " From {$CFG->prefix}assignment_submissions ".
+                                                " From {assignment_submissions} ".
                                                  "WHERE assignment = ". $assignment -> id)) {
                 foreach ($submissions as $submission) {
                     $checkedstudent = in_array($submission -> userid, $checkedparticipants);
@@ -1250,7 +1248,7 @@ class mdl_soapserver extends server {
                 $markingtablename = "lw_marking";
             }
             if ($markingRecords = $DB->get_records_sql("SELECT id, marker, student, statuscode, rubric".
-                                                         " FROM {$CFG->prefix}$markingtablename ".
+                                                         " FROM {".$markingtablename."}".
                                                          " WHERE activity = ".$assignment->id)){
                 foreach ($markingRecords as $marking) {
                     //For each marking check the marker and student in the user table, and the rubric and
@@ -1311,7 +1309,7 @@ class mdl_soapserver extends server {
                 
             //Pick up all the markingHistory records attached to this assignment
             if ($markingHistoryRecords = $DB->get_records_sql("SELECT id, lwid, student, marker, rubric".
-                                                         " FROM {$CFG->prefix}lw_marking_history ".
+                                                         " FROM {lw_marking_history}".
                                                          " WHERE activity = ".$assignment->id)){
                 foreach ($markingHistoryRecords as $markingHistory) {
                     //Check to make sure it has an associated marking with it, we don't need to check anything else
@@ -1343,7 +1341,7 @@ class mdl_soapserver extends server {
             //validate team and team_students in this assignment
             if ($teamAssignmentTypeInstalled) {
                 $teams = $DB->get_records_sql("SELECT id, assignment, name, membershipopen".
-                                 " FROM {$CFG->prefix}team ".
+                                 " FROM {team}".
                                  " WHERE assignment = ".$assignment->id);
                 if ($teams) {
                     foreach($teams as $team) {
@@ -1399,7 +1397,7 @@ class mdl_soapserver extends server {
             }
             //validate team marking
             if ($teamMarkingRecords = $DB->get_records_sql("SELECT id, marker, activity, team, statuscode, rubric".
-                                                         " FROM {$CFG->prefix}lw_team_marking ".
+                                                         " FROM {lw_team_marking}".
                                                          " WHERE activity = ".$assignment->id)){
                 foreach ($teamMarkingRecords as $marking) {
                     //For each marking check the marker and student in the user table, and the rubric and
@@ -1452,7 +1450,7 @@ class mdl_soapserver extends server {
             
             // validate team marking history
             if ($teamMarkingHistoryRecords = $DB->get_records_sql("SELECT id, lwid, team, marker, rubric".
-                                                         " FROM {$CFG->prefix}lw_team_marking_history ".
+                                                         " FROM {lw_team_marking_history}".
                                                          " WHERE activity = ".$assignment->id)){
                 foreach ($teamMarkingHistoryRecords as $markingHistory) {
                     //Check to make sure it has an associated marking with it, we don't need to check anything else
