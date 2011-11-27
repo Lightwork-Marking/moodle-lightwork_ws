@@ -1306,7 +1306,7 @@ class LW_Marker  {
             $um = new upload_manager('newfile',false,true,$assignmentinstance->course,false,0,true);
 
             $um->files['newfile'] = array( 	'name'      => $annotatedRecord['filename'],
-                                'type'      => substr($annotatedresresRecord['contenttype'],0,strpos($annotatedRecord['contenttype'],';')),
+                                'type'      => substr($annotatedRecord['contenttype'],0,strpos($annotatedRecord['contenttype'],';')),
                                 'tmp_name'  => $tmpfile,
                                 'error'     => 0,
                                 'size'      => filesize($tmpfile));

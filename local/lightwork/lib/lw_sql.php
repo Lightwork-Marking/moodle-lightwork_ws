@@ -66,12 +66,12 @@ function get_assignment_resource_id($courseid, $assignmentid) {
 
 function find_file_contextid($courseid, $filepath, $filename) {
     return "SELECT f.contextid ". 
-		   "FROM {files} f, {context} ctx, {course_modules} modl, {resource} rs ".
+		   "FROM {files} f, {context} ctx, {course_modules} modl, {modules} md ".
            "WHERE f.contextid = ctx.id ".
            "AND ctx.instanceid = modl.id ".
            "AND modl.course = {$courseid} ".
-           "AND modl.module = rs.id ". 
-           "AND rs.name = 'resource' ".
+           "AND modl.module = md.id ". 
+           "AND md.name = 'resource' ".
            "AND f.component = 'mod_resource' ".
            "AND f.filearea = 'content' ".
            "AND f.filepath = '{$filepath}' ".

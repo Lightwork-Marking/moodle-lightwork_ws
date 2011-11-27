@@ -79,11 +79,10 @@ class LW_document {
         
         $files = $this->get_assignment_fileinfo($includeannotatedfiles);
         forEach ($files as $file) {
-            $params = $file->get_params();
-            $relative_file_path = ltrim($params['filepath'].$params['filename']);
+            $relative_file_path = ltrim($file->filepath .$file->filename);
             $rdocuments['metadata'][] = array('metadatainformation' => $relative_file_path,
-                                              'modificationtime'    => $file->get_timemodified(),
-                                              'contextid'           => $params['contextid']);
+                                              'modificationtime'    => $file->timemodified,
+                                              'contextid'           => $file->contextid);
         }
         
         return $rdocuments;
@@ -95,24 +94,47 @@ class LW_document {
         $browser = get_file_browser();
         $sql = get_assignment_resource_id($this->courseid, $this->assignmentid);
         $resources = $DB->get_records_sql($sql);
+        $contexts = array();
         forEach($resources as $id => $rm) {
             if ($id) {
                 $context = get_context_instance(CONTEXT_MODULE, $id);
-                if ($parent = $browser->get_file_info($context, 'mod_resource', 'content', 0)) {
-                    $result = $this->collect_children_fileinfo($parent, $result, $includeannotatedfiles);
+                if ($context) {
+                    $contexts[] = $context->id;
                 }
+                error_log('get_assignment_fileinfo context: ' . var_export($context, true));
             }
         }
         
-        return $result;
+        return $this->load_fileinfo($contexts);
+    }
+    
+    private function load_fileinfo($contexts, $includeannotatedfiles = true) {
+        global $DB;
+        
+        if (empty($contexts)) {
+            return array();
+        }
+        
+        list($usql, $params) = $DB->get_in_or_equal($contexts);
+        $sql = "select * from {files} ".
+               "where component='mod_resource' ".
+               "and filearea='content' ".
+               "and filename <> '.' ".
+               "and contextid $usql";
+        
+        if (!$includeannotatedfiles) {
+            $sql = $sql . " and filename not like '/annotated/%'";
+        }
+        error_log('load_fileinfo sql: [' . $sql . '] and params: ' . var_export($params, true));
+        
+        return $DB->get_records_sql($sql, $params);
     }
     
     /*
      * Traverse down the folder structure and collect all child fileinfo.
-     */
     private function collect_children_fileinfo($folder, &$result, $includeannotatedfiles = true) {
         $children = $folder->get_children();
-        //LW_Common::lw_debug('children: ', $children);
+        error_log('children: ', var_export($children, true));
         
         forEach($children as $child) {
             $params = $child->get_params();
@@ -131,6 +153,7 @@ class LW_document {
         
         return $result;
     }
+     */
 
     /**
      * Saves a file as a resource for the assignment
@@ -145,9 +168,15 @@ class LW_document {
          
         $USER->id = $docowner;
 
+        if ($docname[0] != '/') {
+            $docname = '/' . $docname;
+        }
         $path_parts = pathinfo($docname);
         if ($path_parts['dirname'] === '.') {
             $path_parts['dirname'] = '/';
+        }
+        if (substr($path_parts['dirname'], -1) != '/') {
+            $path_parts['dirname'] = $path_parts['dirname'] . '/';
         }
 
         //LW_Common::lw_debug('document_save_file() - path_parts: ', $path_parts);
@@ -268,9 +297,10 @@ class LW_document {
     function construct_draftinfo($context, $path_parts, $docowner) {
         // generate somewhat unique itemid by hashsing the fullpath filename
         // since md5 hash is too big too convert to integer, we just grab
-        // the first 8 digits of the md5 hash.
-        $hash = substr((md5($path_parts['dirname'] . $path_parts['basename'])), 0, 8);
-        $itemid = hexdec($hash);
+        // the first 6 digits of the md5 hash.
+        $hash = substr((md5($path_parts['dirname'] . $path_parts['basename'])), 0, 6);
+        $itemid = abs(hexdec($hash));
+        error_log('construct_draftinfo() - itemid: ' . $itemid);
         return array('contextid'   => $context->id,
                      'component'   => 'user',
                      'filearea'    => 'draft',
@@ -296,7 +326,7 @@ class LW_document {
                 //LW_Common::lw_debug('  delete successful');
             } catch (dml_exception $dex) {
                 //LW_Common::lw_debug('save_draftfile dml_exception: '. $dex->getMessage());
-                error_log('save_file dml_exception: '.$dex->getMessage());
+                error_log('save_file dml_exception('.var_export($fileinfo, true).', '.$docname.'): '.$dex->getMessage());
             }
         }
         try {
@@ -304,7 +334,7 @@ class LW_document {
             $fs->create_file_from_string($fileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
         } catch (file_exception $fex) {
             //LW_Common::lw_debug('save_draftfile file_exception: '. $fex->getMessage());
-            error_log('save_file file_exception: '.$fex->getMessage());
+            error_log('save_file file_exception('.var_export($fileinfo, true).', '.$docname.'): '.$fex->getMessage());
         }
     }
     
@@ -333,9 +363,13 @@ class LW_document {
         if ($path_parts['dirname']==='.') {
             $path_parts['dirname']='/';
         }
-        if ($path_parts['dirname'][strlen($path_parts['dirname'])-1] !== '/') {
+        if ($path_parts['dirname'][0] !== '/') {
+            $path_parts['dirname'] = '/' . $path_parts['dirname'];
+        }
+        if (substr($path_parts['dirname'], -1) !== '/') {
             $path_parts['dirname'] = $path_parts['dirname'] . '/';
         }
+        
         //debugging('path_parts: ' . var_export($path_parts, true));
         $contextid = $this->get_file_contextid($path_parts['dirname'], $path_parts['basename']);
         //debugging($filename . ' has contextid ' . $contextid);
@@ -369,14 +403,14 @@ class LW_document {
      */
     function get_file_contextid($filepath, $filename) {
         global $DB;
-        
+        error_log('get_file_context_id() - filepath: ' . $filepath . ' - filename: ' . $filename);
         $sql = find_file_contextid($this->courseid, $filepath, $filename);
         $params = array();
         $params['courseid'] = $this->courseid;
         $params['filepath'] = $filepath;
         $params['filename'] = $filename;
         $result = $DB->get_record_sql($sql, $params);
-        // debugging('result: ' . print_r($result, true));
+        error_log('get_file_contextid result: ' . var_export($result, true));
         if ($result) {
             return $result->contextid;
         }
