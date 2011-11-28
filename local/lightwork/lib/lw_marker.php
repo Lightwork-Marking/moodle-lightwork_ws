@@ -243,7 +243,7 @@ class LW_Marker  {
                   
         $plagiarismsettings = false;
         if ($useTii) {
-        	error_log('found tii_files table ');
+        	// error_log('found tii_files table ');
             include_once($CFG->libdir.'/turnitinlib.php');
             $plagiarismsettings = get_settings();
         }
@@ -719,7 +719,7 @@ class LW_Marker  {
         require_once("$CFG->libdir/grade/grade_item.php");
         require_once("$CFG->libdir/grade/grade_grade.php");
         $rmarkings = array();
-        foreach ($assignmentmarkings as $activity => $markings) {             
+        foreach ($assignmentmarkings as $activity => $markings) {
             $markingrecords = $this->get_marking_allocation($activity);
             $assignment = $DB->get_record('assignment', array('id'=>$activity));
             if (!$assignment) {
@@ -727,18 +727,17 @@ class LW_Marker  {
                 continue;
             }
             if ($releaseMarking) {
-                //$assignment_grading_info = grade_get_grades($assignment->course, 'mod', 'assignment', $assignment->id, null);
                 $grade_item = grade_item::fetch(array('courseid'     => $assignment->course, 
                                                        'itemtype'     => 'mod',
                                                        'itemmodule'   => 'assignment',
                                                        'iteminstance' => $assignment->id));
                 if ($grade_item && $grade_item->locked) {
-                    error_log('grade locked');
+                    // error_log('grade locked');
                     $this->error->add_error('Marking', $activity, 'assignmentgradeitemlocked');
                     continue;
                 }
                 if (!$this->is_allowed_assignment_type($assignment)){
-                    error_log('assignment type is not allowed');
+                    // error_log('assignment type is not allowed');
                     $this->error->add_error('Marking', $activity, 'unsupportedassignmenttype');
                     continue;
                 }
@@ -747,39 +746,21 @@ class LW_Marker  {
             $ismanager = has_capability(LW_Common::CAP_MANAGELWMARKERS , $context, $this->uid, false);
             $ismarker = has_capability(LW_Common::CAP_MARKLWSUBMISSIONS , $context, $this->uid, false);
             $studentparticipants = array();
-            if ($allstudents == 0){
+            if ($allstudents == 0) {
                 $studentparticipants = $this->load_submitted_students($context, $assignment->id, 0);
+                // error_log('load submitted student participants: ' . var_export($studentparticipants, true));
             } else {
                 $studentparticipants = $this->course_participants_since($assignment->course, 0, 'mod/assignment:submit');
+                // error_log('course participants: ' . var_export($studentparticipants, true));
             }
             $markerparticipants = $this->course_participants_since($assignment->course, 0, LW_Common::CAP_MARKLWSUBMISSIONS);
              
             foreach ($markings as $marking) {
-                if (!$marking['marker']) {
-                    $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
-                    continue; // cant save without a marker id
+                // error_log('save_marking - markings: ' . var_export($marking, true));
+                if (!$this->validate_marking($marking)) {
+                    continue; // skip this marking as error occur
                 }
-                if (!$marking['markable']) {
-                    $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
-                    continue; // cant save without a student id
-                }
-                if (!$marking['activity']) {
-                    $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
-                    continue; // cant save without an activity
-                }
-                if (!$marking['rubric']) {
-                    $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
-                    continue; // cant save without a rubric id
-                }
-                if (!$marking['statuscode']) {
-                    $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
-                    continue; // cant save without a statuscode
-                }
-                if (strpos($marking['xmltextref'], 'cid') === 0) {
-                    // This is an error because at this point xmltextref should have been overwritten with the actual data
-                    $this->error->add_error('Marking', $marking['markable'], 'nomarkingassignment');
-                    continue;
-                }
+                
                 $grading_info = null;
                 if ($releaseMarking) {
                     //$grading_info = grade_get_grades($assignment->course, 'mod', 'assignment', $assignment->id, $marking['markable']);
@@ -848,7 +829,7 @@ class LW_Marker  {
                         // check for referential integrity before doing insert
                         if ($rubric && $marker && $student && $assignment && $statuscode) {
                             // Is the student or marker currently a course participant. If not, return an error
-                            $isstudentacourseparticipant = $this ->is_course_participant($studentparticipants, $student, $activity);
+                            $isstudentacourseparticipant = $this->is_course_participant($studentparticipants, $student, $activity);
                             $ismarkeracourseparticipant = false;
                              
                             foreach ($markerparticipants as $markerparticipant){
@@ -997,20 +978,20 @@ class LW_Marker  {
                                 // Don't try to save this record
                                 continue;
                             } 
-                           // error_log('pass student validating');
+                            // error_log('pass student validating');
                             $markupdate->rubric = clean_param($marking['rubric'], PARAM_INT);
                             $markupdate->xmltext = $marking['xmltextref'];
                             $markupdate->statuscode = clean_param($marking['statuscode'], PARAM_ALPHA);
                             $markupdate->deleted = clean_param($marking['deleted'], PARAM_INT);
                             $markupdate->timemodified = time();
-                           // error_log('update  marking');
+                            // error_log('update  marking');
                             if (!$DB->update_record($this->table,$markupdate)) {
                                 error_log('update fail id ->'.$marking['markable']);
                                 $this->error->add_error('Marking', $marking['activity'], 'errsysupdatemarking');
                             }
                             else {
                                 //  Insert marking history
-                               // error_log ('insert marking history');
+                                // error_log ('insert marking history');
                                 $rmarkinghistories = array();
                                 if (array_key_exists('markinghistory', $marking)) {
                                     foreach($marking['markinghistory'] as $markinghistory) {
@@ -1030,14 +1011,14 @@ class LW_Marker  {
 
                                         //  Insert the history record
                                         if (!$DB->insert_record($this->historytable,$markhistoryupdate,true)) {
-                                           // error_log('insert marking history fails');
-                                            error_log("insert history record fail: markable id ->".$marking['markable']." assignment id ->".$markhistoryupdate->activity." status code -> ".$markhistoryupdate->statuscode);
+                                            // error_log('insert marking history fails');
+                                            // error_log("insert history record fail: markable id ->".$marking['markable']." assignment id ->".$markhistoryupdate->activity." status code -> ".$markhistoryupdate->statuscode);
                                             $this->error->add_error('MarkingHistory', $markinghistory['lwid'], 'errsysaddmarkinghistory');
                                         }
                                         //  Add the history record to the response payload
                                         else {
                                             $rmarkinghistories[] = array( 'lwid' => $markhistoryupdate->lwid,
-                                                                      'timemodified' => $markhistoryupdate->timemodified
+                                                                          'timemodified' => $markhistoryupdate->timemodified
                                             );
                                         }
                                     }
@@ -1073,6 +1054,35 @@ class LW_Marker  {
         }
 
         return array('markingresponse'=>$rmarkings);
+    }
+    
+    private function validate_marking($marking) {
+        if (!$marking['marker']) {
+            $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
+            return FALSE; // cant save without a marker id
+        }
+        if (!$marking['markable']) {
+            $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
+            return FALSE; // cant save without a student id
+        }
+        if (!$marking['activity']) {
+            $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
+            return FALSE; // cant save without an activity
+        }
+        if (!$marking['rubric']) {
+            $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
+            return FALSE; // cant save without a rubric id
+        }
+        if (!$marking['statuscode']) {
+            $this->error->add_error('Marking', $marking['activity'], 'errsysaddmarking');
+            return FALSE; // cant save without a statuscode
+        }
+        if (strpos($marking['xmltextref'], 'cid') === 0) {
+            // This is an error because at this point xmltextref should have been overwritten with the actual data
+            $this->error->add_error('Marking', $marking['markable'], 'nomarkingassignment');
+            return FALSE;
+        }
+        return TRUE;
     }
 
     private function is_course_participant($studentparticipants, $markable, $activity) {
@@ -1255,9 +1265,15 @@ class LW_Marker  {
     function upload_annotated_files($annotatedRecords, $assignmentinstance, $submission, $cm) {        
         $lw_doc = new LW_document($assignmentinstance->course->id, $assignmentinstance->assignment->id);
         foreach ($annotatedRecords as $annotatedRecord) {
+            if ($annotatedRecord['filename'][0] != '/') {
+                $annotatedRecord['filename'] = '/' . $annotatedRecord['filename']; 
+            }
             $path_parts = pathinfo($annotatedRecord['filename']);
             if ($path_parts['dirname'] === '.') {
                 $path_parts['dirname'] = '/';
+            }
+            if (substr($path_parts['dirname'], -1) != '/') {
+                $path_parts['dirname'] = $path_parts['dirname'] . '/';
             }
             
             $context = get_context_instance(CONTEXT_USER, $this->uid);

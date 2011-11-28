@@ -321,16 +321,16 @@ class LW_document {
                               $fileinfo['filename']);
         if ($file) {
             try {
-                //LW_Common::lw_debug('  deleting file: ' . var_export($file, true));
+                // error_log('  deleting file: ' . var_export($file, true));
                 $file->delete();
-                //LW_Common::lw_debug('  delete successful');
+                // error_log('  delete successful');
             } catch (dml_exception $dex) {
                 //LW_Common::lw_debug('save_draftfile dml_exception: '. $dex->getMessage());
                 error_log('save_file dml_exception('.var_export($fileinfo, true).', '.$docname.'): '.$dex->getMessage());
             }
         }
         try {
-            //LW_Common::lw_debug('save_file file_info: ', var_export($fileinfo, true));
+            // error_log('save_file file_info: ', var_export($fileinfo, true));
             $fs->create_file_from_string($fileinfo,$this->helper->sanitise_for_msoffice2007($docname, $data));
         } catch (file_exception $fex) {
             //LW_Common::lw_debug('save_draftfile file_exception: '. $fex->getMessage());

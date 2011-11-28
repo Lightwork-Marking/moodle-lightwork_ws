@@ -722,34 +722,48 @@ class mdl_soapserver extends server {
         }
 
         $attachments = $NUSOAP_SERVER->getAttachments();
-
+        error_log('releaseMarking attachments: ' . var_export($attachments, true));
         foreach($markings as $marking) {
             $cid = '<'.$marking['xmltextref'].'>';
-            foreach ($attachments as $attachment) {
+            foreach ($attachments as $key => $attachment) {
                 if ($cid == $attachment['cid']) {
                     // xmltextref field is overwritten with the data
                     $marking['xmltextref'] = $attachment['data'];
                 }
                 else {
                     foreach ($marking['annotatedRecords'] as $annotatedRecord) {
+                        error_log('release_marking $annotatedRecord: ' . var_export($annotatedRecord, true));
                         if (is_array($annotatedRecord)) {
                             $annotatedFileCid = '<'.$annotatedRecord['fileref'].'>';
+                            
+                            if ($annotatedFileCid == $attachment['cid']) {
+                                error_log('release_marking $annotatedRecord[filename]: ' . $annotatedRecord['filename']);
+                                $marking['annotated_records'][] = array(
+                                        'data' => $attachment['data'],
+                                        'filename' => $annotatedRecord['filename'],
+                                        'contenttype' => $attachment['contenttype']
+                                );
+                                unset($attachments[$key]);
+                                break;
+                            }
                         }
                         else {
                             $annotatedFileCid = '<'.$annotatedRecord.'>';
+                            
+                            if ($annotatedFileCid == $attachment['cid']) {
+                                $marking['annotated_records'][] = array(
+                                        'data' => $attachment['data'],
+                                        'filename' => $marking['annotatedRecords']['filename'],
+                                        'contenttype' => $attachment['contenttype']
+                                );
+                                unset($attachments[$key]);
+                                break;
+                            }
                         }
-                        if ($annotatedFileCid == $attachment['cid']) {
-                            $marking['annotated_records'][] = array(
-                                    'data' => $attachment['data'],
-                                    'filename' => $annotatedRecord['filename'],
-                                    'contenttype' => $attachment['contenttype']
-                            );
-                            break;
-                        }
+                        
                     }
                 }
             }
-
             if (isset($marking['markinghistory']) && strpos($marking['xmltextref'], 'cid') !== 0) {
                 //  now each history
                 if (isset($marking['markinghistory']['lwid'])) {
@@ -763,7 +777,7 @@ class mdl_soapserver extends server {
                     }
                 }
             }
-
+            error_log('releaseMarking marking: ' . var_export($marking, true));
             if (array_key_exists($marking['activity'], $assignmentmarkings)){
                 $assignmentmarkings[$marking['activity']][] = $marking;
             } else {
