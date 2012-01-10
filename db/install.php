@@ -9,7 +9,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-function xmldb_local_lightwork_install() {
+function xmldb_local_lightworkws_install() {
     global $CFG, $DB;
     // Insert marking status records
     $statusAL = new stdClass();
@@ -62,7 +62,7 @@ function xmldb_local_lightwork_install() {
     
 }
 
-function xmldb_local_lightwork_install_recovery() {
+function xmldb_local_lightworkws_install_recovery() {
     global $CFG, $DB;
     // TODO
     

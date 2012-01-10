@@ -25,7 +25,7 @@
 // LightWork  INSTALL CODE ENDS
 // ----------------------------------------------------------------------------------------------
 
-$local_lightwork_capabilities = array(
+$local_lightworkws_capabilities = array(
 
     'local/lightwork:managelightworkmarkers' => array(
         'captype' => 'write',

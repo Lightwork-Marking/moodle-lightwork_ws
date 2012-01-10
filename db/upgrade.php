@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-function xmldb_local_lightwork_upgrade($oldversion) {
+function xmldb_local_lightworkws_upgrade($oldversion) {
     global $CFG, $DB;
     $dbman = $DB->get_manager();
 	   	

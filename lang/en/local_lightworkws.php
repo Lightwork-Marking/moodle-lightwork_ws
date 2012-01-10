@@ -1,6 +1,6 @@
 <?php
 
-$string['pluginname'] = 'Lightwork';
+$string['pluginname'] = 'Lightwork WebServices';
 $string['local:managelightworkmarkers'] = 'Manage the marking process in Lightwork';
 $string['local:marklightworksubmissions'] = 'Mark assignments in Lightwork';
 $string['nodatafound'] = 'No data found';
