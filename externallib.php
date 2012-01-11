@@ -81,7 +81,7 @@ class local_lightworkws_external extends external_api {
                 'timedue'	=> new external_value(PARAM_INT, 'assignment due time'),
                 'assignmenttype'	=> new external_value(PARAM_TEXT, 'assignment type'),
                 'grade'		=> new external_value(PARAM_INT, 'grade type'),
-				 'timemodified'	    => new external_value(PARAM_INT, 'last time assignment was modified')
+				'timemodified'	    => new external_value(PARAM_INT, 'last time assignment was modified')
             ), 'assignment information object');
     }
     
@@ -124,7 +124,7 @@ class local_lightworkws_external extends external_api {
             array(
                 'courseids'		=> new external_multiple_structure(new external_value(PARAM_INT, 'course id')),
                 'timemodified'	=> new external_value(PARAM_INT, 'time modified'),
-                'allstudents'	=> new external_value(PARAM_INT, 'flag to include all students or not')
+                'allstudents'	=> new external_value(PARAM_BOOL, 'flag to include all students or not')
             )
         );
     }
@@ -170,7 +170,7 @@ class local_lightworkws_external extends external_api {
             array(
                 'assignmentids' => new external_multiple_structure(new external_value(PARAM_INT, 'assignment id')),
                 'timemodified'	=> new external_value(PARAM_INT, 'time modified'),
-                'allstudents'	=> new external_value(PARAM_INT, 'flag to include all students or not')
+                'allstudents'	=> new external_value(PARAM_BOOL, 'flag to include all students or not')
             )
         );
     }
@@ -207,6 +207,50 @@ class local_lightworkws_external extends external_api {
             array(
                 'assignments' => new external_multiple_structure(self::assignment_submissions(), 'list of assignment submissions'),
                 'errors'	  => self::errors_structure()
+            )
+        );
+    }
+    
+    /**
+     * Get Marking Rubrics
+     */
+    public static function get_marking_rubrics_parameters() {
+        return new external_function_parameters(
+            array(
+            	'assignmentids' => new external_multiple_structure(new external_value(PARAM_INT, 'assignment id')),
+                'timemodified'	=> new external_value(PARAM_INT, 'time modified')
+            )
+        );
+    }
+    
+    public static function get_marking_rubrics() {
+        
+    }
+    
+    private static function marking_rubrics() {
+        return new external_single_structure(
+            array(
+                'id'	    => new external_value(PARAM_INT, 'assignment id'),
+                'rubrics'	=> new external_multiple_structure(new external_single_structure(
+                    array(
+                        'id'		    => new external_value(PARAM_INT, 'rubric id'),
+                        'activity'	    => new external_value(PARAM_INT, 'activity id'),
+                        'activitytype' 	=> new external_value(PARAM_INT, 'activity type'),
+                        'xmltextref'	=> new external_value(PARAM_TEXT, 'xml text reference'),
+                        'complete'		=> new external_value(PARAM_BOOL, 'whether this rubric is completed'),
+                        'deleted'		=> new external_value(PARAM_BOOK, 'whether this rubric is deleted'),
+                        'timemodified'  => new external_value(PARAM_INT, 'last time rubric was modified')
+                    )
+                ))
+            )
+        );
+    }
+    
+    public static function get_marking_rubrics_returns() {
+        return new external_single_structure(
+            array(
+            	'assignments' => new external_multiple_structure(self::marking_rubrics(), 'list of assignment submissions'),
+            	'errors'	  => self::errors_structure()
             )
         );
     }

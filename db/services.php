@@ -41,6 +41,14 @@ $functions = array(
                 'classpath'   => 'local/lightworkws/externallib.php',
                 'description' => 'Return list of participants to specified courses',
                 'type'        => 'read',
+        ),
+        
+		'local_lightworkws_get_marking_rubrics' => array(
+                'classname'   => 'local_lightworkws_external',
+                'methodname'  => 'get_marking_rubrics',
+                'classpath'   => 'local/lightworkws/externallib.php',
+                'description' => 'Return list of participants to specified courses',
+                'type'        => 'read',
         )
 );
 
