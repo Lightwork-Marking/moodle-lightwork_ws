@@ -56,7 +56,7 @@ class local_lightworkws_external extends external_api {
                     'id' 		=> $i,
                     'course'	=> $i,
                     'name'		=> 'Assignment ' . $i,
-                    'timedue'	=> $i + 100,
+                    'timedue'	=> ($i * 10000) + 12345678,
                     'assignmenttype' => 'Random Type',
                     'grade'		=> 100,
                     'timemodified' => $params['timemodified'] - $i
@@ -238,7 +238,7 @@ class local_lightworkws_external extends external_api {
                         'activitytype' 	=> new external_value(PARAM_INT, 'activity type'),
                         'xmltextref'	=> new external_value(PARAM_TEXT, 'xml text reference'),
                         'complete'		=> new external_value(PARAM_BOOL, 'whether this rubric is completed'),
-                        'deleted'		=> new external_value(PARAM_BOOK, 'whether this rubric is deleted'),
+                        'deleted'		=> new external_value(PARAM_BOOL, 'whether this rubric is deleted'),
                         'timemodified'  => new external_value(PARAM_INT, 'last time rubric was modified')
                     )
                 ))
