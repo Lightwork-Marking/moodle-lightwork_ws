@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<buildpath>
+	<buildpathentry kind="src" path="local/lightwork/ws"/>
+	<buildpathentry kind="con" path="org.eclipse.php.core.LANGUAGE"/>
+	<buildpathentry kind="src" path="local/lang/en"/>
+	<buildpathentry combineaccessrules="false" kind="prj" path="/moodle23"/>
+	<buildpathentry kind="src" path="local/lightwork/_install"/>
+	<buildpathentry kind="src" path="local/lightwork/simpletest"/>
+	<buildpathentry kind="src" path="local/lightwork/lib"/>
+</buildpath>
